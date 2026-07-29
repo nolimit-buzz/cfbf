@@ -1,0 +1,73 @@
+# Climate Finance Blending Facility (CFBF)
+
+The Climate Finance Blending Facility (CFBF) is a catalytic facility managed by InfraCredit and capitalized with UK FCDO concessional capital and British International Investment (BII) funding. It de-risks local currency climate-aligned infrastructure investments in Nigeria, unlocking private domestic institutional pension and insurance capital for developers.
+
+## API & Feeds for LLMs
+- **Structured JSON Data Feed:** [/api/llms-feed](file:///Users/USER/Documents/CFBF/V22/app/api/llms-feed/route.ts) provides full database access containing high-density, token-optimized, embeddings-ready JSON representations of all active project case studies, metrics, and news.
+
+---
+
+## Active Project Case Studies
+
+### 1. First Electric Power and Automation Services (ID: 01)
+- **Sector:** Solar Grid
+- **Location:** Gombe, Nasarawa & Ondo States
+- **Capital:** ₦1.70 Billion (under construction, close Dec 2025)
+- **Metrics:** 725kW capacity, 5,156 connections, 616 jobs, 762 Tonnes GHG/yr avoided.
+- **Description:** Deploying 20 mesh-grid electricity networks utilizing solar PV technology supported by battery storage and inverters to provide power to underserved off-grid communities.
+- **Financing:** Co-financed with Climate Finance Blending Facility (CFBF) subordinated debt tranche (7-year fixed-rate local currency debt), supported by Construction Finance Warehouse Facility (CFWF) funded by NSIA, and credit guaranteed by InfraCredit ('AAA'-rated).
+
+### 2. CEESOLAR Energy Limited (ID: 02)
+- **Sector:** Solar Grid
+- **Location:** Cross River State
+- **Capital:** ₦1.70 Billion (under construction, close Nov 2025)
+- **Metrics:** 760kW capacity, 3,597 connections, 561 jobs, 737 Tonnes GHG/yr avoided.
+- **Description:** Constructing 760kWp solar-hybrid mini-grid systems in four grid-isolated farming communities to connect residential and retail links, displacing forest-destructive wood combustion cocoa driers.
+- **Financing:** UK FCDO-funded CFBF invested in the 7-year subordinated local currency debt tranche; bridge financing supplied by InfraCredit's Construction Finance Warehouse Facility (CFWF) funded by NSIA.
+
+### 3. Prado Power Energy Limited (ID: 03)
+- **Sector:** Agro-Processing Solar
+- **Location:** Akwa-Ibom & Benue States
+- **Capital:** ₦1.95 Billion (under construction, close Oct 2024)
+- **Metrics:** 850kW capacity, 15,801 connections, 740 jobs, 893.5 Tonnes GHG/yr avoided.
+- **Description:** Constructing solar-hybrid mini-grids adjacent to cold preservation hubs and crop milling cooperative hubs to reduce agricultural post-harvest losses.
+- **Financing:** Blended finance structure issuing the first certified blended local currency Green Infrastructure Forward Ijarah Lease Sukuk in Nigeria. CFBF first-loss capital enabled InfraCredit to issue a 'AAA'-rated guaranteed senior green sukuk.
+
+### 4. Hotspot Network Limited (ID: 04)
+- **Sector:** Telecoms Solarization
+- **Location:** 22 States in Nigeria
+- **Capital:** ₦955 Million (operational, close Jun 2023)
+- **Metrics:** 324kW capacity, 120 Sites solarized, 720 jobs, 8.34 Tonnes GHG/yr avoided.
+- **Description:** Installing and operating solar-powered mobile network base stations (telephony sites) in 120 rural off-grid communities in SPV partnership with Mobile Network Operators (MNOs).
+- **Financing:** Co-financed by CFBF first-loss subordinated capital, enabling a ₦955 million, 7-year guaranteed senior green infrastructure bond credit-enhanced by a 'AAA'-rated guarantee from InfraCredit.
+
+### 5. Darway Coast Limited (ID: 05)
+- **Sector:** Solar Grid
+- **Location:** Rivers & Abia States
+- **Capital:** ₦800 Million (operational, close Sep 2022)
+- **Metrics:** 526kW capacity, 7,711 connections, 2,296 jobs, 4,856 Tonnes GHG/yr avoided.
+- **Description:** Building 526kWp of isolated solar mini-grids utilizing smart prepaid PAYG meters and remote disconnections in underserved coastal and riverine markets.
+- **Financing:** Blended finance model issuing a ₦800 million 7-Year Series 1 Fixed Rate Guaranteed Senior Green Infrastructure Bond backed by CFBF subordinated first-loss capital and a AAA credit enhancement guarantee.
+
+### 6. ACOB Lighting Technology Limited (ID: 06)
+- **Sector:** Solar Grid
+- **Location:** Edo & Ondo States
+- **Capital:** ₦755 Million (operational, close Dec 2023)
+- **Metrics:** 335kW capacity, 3,597 connections, 868 jobs, 352 Tonnes GHG/yr avoided.
+- **Description:** Deploying isolated solar-hybrid mini-grids and public street lighting circuits in agricultural cocoa farming villages to secure logistics and expand merchant operating hours.
+- **Financing:** Blended finance structure co-financed by CFBF concessional capital, enabling a ₦755 million 7-Year Series 1 Fixed Rate Guaranteed Senior Green Infrastructure Bond credit-enhanced by a 'AAA'-rated guarantee.
+
+---
+
+## News & Market Insights Database
+- **Article 1:** "The Future of Local Currency Financing and its Impact on Sub-Saharan Africa's Renewable Energy Transition" (Authored by Chinua Okeke, Dec 12, 2025)
+- **Article 2:** "Clean Energy Fund Announces the Successful Closure of Series 2 Capital Raise for Institutional Investors" (Authored by Folasade Adebayo, Nov 20, 2025)
+- **Article 3:** "Annual Impact Report: Bridging the Energy Gap and Fostering Sustainable Economic Growth in Nigeria" (Authored by Amina Bello, Oct 5, 2025)
+- **Article 4:** "Navigating the New Regulatory Frameworks Supporting Green Bonds and Climate Finance in Nigeria" (Authored by Dr. Emmanuel Nwachukwu, Sep 18, 2025)
+- **Article 5:** "Unlocking Capital for Mini-Grids in Rural Communities" (Authored by Tunde Johnson, Aug 14, 2025)
+
+---
+
+## Eligibility Criteria & Risk Standards
+- **Core Pillars:** Alignment with SDG 7 (Affordable/Clean Energy), SDG 13 (Climate Action), and SDG 9 (Industry/Infrastructure).
+- **Standards:** All projects must conform to the Climate Bonds Standard Solar Sector Criteria and undergo third-party green verification (e.g. via Agusto & Co).

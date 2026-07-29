@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-dark: #051F1A;
+  --color-brand-primary: #00A788;
+  --color-brand-accent: #81C34D;
+  --color-brand-cyan: #009FD4;
+  --color-brand-light: #FAFDFB;
+  --color-brand-surface: #ffffff;
+
+  /* Outfit everywhere — sans, mono and serif tokens all resolve to Outfit */
+  --font-sans: var(--font-outfit), sans-serif;
+  --font-mono: var(--font-outfit), sans-serif;
+  --font-serif: var(--font-outfit), sans-serif;
+
+  --font-weight-bold: 600;
+
+  --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --background-image-hero-overlay: linear-gradient(to right, rgba(5, 31, 26, 0.9) 0%, rgba(5, 31, 26, 0.4) 100%);
+}
+
+/* Force the Outfit typeface on every element — no exceptions
+   (overrides font-mono / font-serif utilities, inline styles, and SVG <text> font attributes) */
+*, *::before, *::after,
+svg text, svg tspan {
+  font-family: var(--font-outfit), sans-serif !important;
+}
+
+.font-bold {
+  font-weight: 600 !important;
+}
+
+.text-3xl {
+  font-size: var(--text-3xl);
+  line-height: var(--tw-leading, var(--text-3xl--line-height));
+}
+
+@utility container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  width: 100%;
+  
+  @media (min-width: 640px) {
+    max-width: 640px;
+  }
+  @media (min-width: 768px) {
+    max-width: 768px;
+  }
+  @media (min-width: 1024px) {
+    max-width: 1024px;
+  }
+  @media (min-width: 1280px) {
+    max-width: 1280px;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #051F1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #48C0A3;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #008751;
+}
+
+body {
+  background-color: #ffffff;
+  color: #051F1A;
+  cursor: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+.text-outline {
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+  color: transparent;
+}
+
+/* Extra utility styles */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Global focus-visible outlines for keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* GPU-accelerated marquee — replaces Framer Motion infinite loop */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.333%); }
+}
