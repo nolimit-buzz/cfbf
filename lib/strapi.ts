@@ -7,6 +7,10 @@ import type {
   ProjectsSection,
   ProjectsSectionComponent,
 } from "./strapi-projects-types";
+import type {
+  ImpactSection,
+  ImpactSectionComponent,
+} from "./strapi-impact-types";
 
 export const STRAPI_URL = (
   process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"
@@ -242,6 +246,64 @@ export async function getProjectsSections(): Promise<ProjectsSection[]> {
 }
 
 /**
+ * Same rule again for the IMPACT single type, but simpler: every one of its ten
+ * components holds at most one level of repeatables (stats, pillars, tabs,
+ * stories, metrics, timeline points, SDG cards, columns, assets, links), so a
+ * single `[populate]=*` per component covers the whole zone.
+ */
+function buildImpactQuery(): string {
+  const params = new URLSearchParams();
+
+  const oneLevel: ImpactSectionComponent[] = [
+    "impact-page.structured-data-section",
+    "impact-page.hero-section",
+    "impact-page.philosophy-section",
+    "impact-page.impact-console-section",
+    "impact-page.stories-tab-section",
+    "impact-page.numbers-tab-section",
+    "impact-page.investments-tab-section",
+    "impact-page.assets-tab-section",
+    "impact-page.next-steps-section",
+    "impact-page.video-modal-section",
+  ];
+
+  for (const component of oneLevel) {
+    params.set(`populate[sections][on][${component}][populate]`, "*");
+  }
+
+  return params.toString();
+}
+
+/** Same contract as fetchHomeSections(), against the IMPACT singleType. */
+async function fetchImpactSections(): Promise<ImpactSection[]> {
+  const url = `${STRAPI_URL}/api/impact?${buildImpactQuery()}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error(`GET /api/impact failed: ${res.status} ${res.statusText}`);
+  }
+
+  const json = await res.json();
+  const sections = json?.data?.sections;
+
+  return Array.isArray(sections) ? (sections as ImpactSection[]) : [];
+}
+
+/** Error-handling wrapper — see getHomeSections(). */
+export async function getImpactSections(): Promise<ImpactSection[]> {
+  try {
+    return await fetchImpactSections();
+  } catch (error) {
+    if (typeof (error as { digest?: unknown })?.digest === "string") {
+      throw error;
+    }
+    console.error("[strapi] GET /api/impact failed:", error);
+    return [];
+  }
+}
+
+/**
  * One case-study record from the `project` collection, looked up by its
  * `projectId` ("01".."06") — the segment in /projects/[id].
  *
@@ -323,7 +385,8 @@ export function findSection<
     __component:
       | HomeSectionComponent
       | AboutSectionComponent
-      | ProjectsSectionComponent;
+      | ProjectsSectionComponent
+      | ImpactSectionComponent;
   },
   C extends S["__component"]
 >(sections: S[], component: C): Extract<S, { __component: C }> | undefined {
