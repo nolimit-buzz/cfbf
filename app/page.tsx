@@ -1,69 +1,75 @@
-"use client";
+import { Suspense } from "react";
+import HomeSections from "@/components/home/HomeSections";
+import { findSection, getHomeSections } from "@/lib/strapi";
+import type { StructuredDataSection } from "@/lib/strapi-types";
 
-import dynamic from 'next/dynamic';
-import Hero from "@/components/home/Hero"; // Above fold — keep eager
+function buildJsonLd(data: StructuredDataSection) {
+  const orgId = `${data.url ?? ""}/#organization`;
 
-// Below-fold — lazy loaded to prevent simultaneous hydration
-const AboutSection    = dynamic(() => import('@/components/home/About'),   { ssr: false });
-const HowWeDriveImpact = dynamic(() => import('@/components/home/Impact'), { ssr: false });
-const Projects        = dynamic(() => import('@/components/home/Projects'), { ssr: false });
-const MapSection      = dynamic(() => import('@/components/home/Map'),     { ssr: false });
-const FeaturedStories = dynamic(() => import('@/components/home/Stories'), { ssr: false });
-const LatestNews      = dynamic(() => import('@/components/home/News'),    { ssr: false });
-const NetZeroSection  = dynamic(() => import('@/components/home/NetZero'), { ssr: false });
-
-
-export default function Home() {
-  const jsonLd = {
+  return {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://climatesupportfacility.org/#organization",
-        "name": "Climate Finance Blending Facility (CFBF)",
-        "url": "https://climatesupportfacility.org",
-        "logo": {
+        "@id": orgId,
+        name: data.organizationName,
+        url: data.url,
+        logo: {
           "@type": "ImageObject",
-          "url": "https://climatesupportfacility.org/logo.png"
+          url: data.logoUrl,
         },
-        "description": "A catalytic facility managed by InfraCredit and capitalized with UK FCDO concessional capital and British International Investment (BII) funding to de-risk green investments in local currency.",
-        "sponsor": [
-          {
-            "@type": "Organization",
-            "name": "UK Foreign, Commonwealth & Development Office (FCDO)"
-          },
-          {
-            "@type": "Organization",
-            "name": "British International Investment (BII)"
-          }
-        ]
+        description: data.description,
+        sponsor: (data.sponsors ?? []).map((sponsor) => ({
+          "@type": "Organization",
+          name: sponsor.name,
+        })),
       },
       {
         "@type": "WebSite",
-        "@id": "https://climatesupportfacility.org/#website",
-        "url": "https://climatesupportfacility.org",
-        "name": "Climate Finance Blending Facility | CFBF",
-        "publisher": {
-          "@id": "https://climatesupportfacility.org/#organization"
-        }
-      }
-    ]
+        "@id": `${data.url ?? ""}/#website`,
+        url: data.url,
+        name: data.siteName,
+        publisher: {
+          "@id": orgId,
+        },
+      },
+    ],
   };
+}
+
+async function HomeContent() {
+  const sections = await getHomeSections();
+  const structuredData = findSection(sections, "home-page.structured-data-section");
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <Hero />
-      <AboutSection />
-      <HowWeDriveImpact />
-      <Projects />
-      <MapSection />
-      <FeaturedStories />
-      <LatestNews />
-      <NetZeroSection />
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildJsonLd(structuredData)),
+          }}
+        />
+      )}
+      <HomeSections sections={sections} />
     </>
+  );
+}
+
+export default function Home() {
+  // No placeholder UI: the page streams nothing until the CMS responds, then
+  // paints the real sections in one pass. The boundary itself has to stay —
+  // `cacheComponents` (next.config.ts) requires uncached data to sit inside a
+  // Suspense boundary, and getHomeSections() is deliberately uncached.
+  return (
+      <Suspense
+          fallback={
+           <div className="bg-brand-dark text-white min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
+          
+            </div>
+          }
+        >
+      <HomeContent />
+    </Suspense>
   );
 }

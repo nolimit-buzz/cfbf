@@ -1,3 +1,15 @@
+/**
+ * LEGACY — the /projects pages no longer read this file. Both the listing and
+ * the case studies now come from Strapi (`getProjectsSections()` and
+ * `getProjectDetails()` in lib/strapi.ts), where editors can change them.
+ *
+ * The only remaining consumer is components/Navbar.tsx, which uses it for the
+ * mega-menu preview and the search box. Migrating the navbar means fetching in
+ * the root layout and threading props through a global client component, so it
+ * was left out of the CMS migration — meaning project copy lives in two places
+ * until that happens. Update both, or finish the navbar migration and delete
+ * this file.
+ */
 export interface Project {
   id: string;
   title: string;

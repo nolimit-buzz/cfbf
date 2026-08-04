@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -22,7 +22,12 @@ import StickyProjectNav from '@/components/ui/StickyProjectNav';
 import { FSDAfricaLogo, GCRRatingsLogo, AgustoCoLogo } from '@/components/ui/MapLogos';
 // @ts-ignore
 import nigeriaMapData from '@svg-maps/nigeria';
-import { projects, Project } from '@/lib/projectsData';
+import {
+  parseCsv,
+  type GalleryItem,
+  parseSdgs,
+  type ProjectDetail,
+} from '@/lib/strapi-projects-types';
 
 interface StateLocation {
   id: string;
@@ -38,27 +43,6 @@ const SDG_INFO = {
   11: { name: 'Sustainable Cities & Communities', color: '#FD9D24', textClass: 'text-[#FD9D24] border-[#FD9D24]/25 bg-[#FD9D24]/5' },
   13: { name: 'Climate Action', color: '#3F7E44', textClass: 'text-[#56C36A] border-[#56C36A]/25 bg-[#56C36A]/5' },
   17: { name: 'Partnerships for the Goals', color: '#19486A', textClass: 'text-[#19486A] border-[#19486A]/25 bg-[#19486A]/5' }
-};
-
-const getProjectSDGs = (id: string): number[] => {
-  switch (id) {
-    case '01': return [7, 13];
-    case '02': return [7, 13];
-    case '03': return [7, 8, 9];
-    case '04': return [9, 13];
-    case '05': return [7, 13];
-    case '06': return [7, 8, 13];
-    default: return [7];
-  }
-};
-
-const PROJECT_STATES: Record<string, string[]> = {
-  "01": ["gombe", "nasarawa", "ondo"],
-  "02": ["cross-river"],
-  "03": ["akwa-ibom", "benue"],
-  "04": ["kano", "fct", "lagos", "rivers", "bauchi", "kaduna", "cross-river", "ondo", "gombe", "nasarawa", "edo", "akwa-ibom", "benue", "abia", "katsina", "jigawa", "sokoto", "zamfara", "kebbi", "kogi", "kwara", "taraba", "adamawa", "borno", "yobe", "plateau", "niger", "ekiti", "osun", "ogun"],
-  "05": ["rivers", "abia"],
-  "06": ["edo", "ondo"]
 };
 
 // INTERACTIVE NIGERIA MAP
@@ -156,40 +140,27 @@ const InteractiveNigeriaMap = ({ projectId, activeStates, selectedState, setSele
   );
 };
 
-// DYNAMIC TEXT GENERATOR FOR EXPECTED IMPACT SECTION
-const getExpectedImpactText = (p: { id: string; connections: string; jobs: string; ghg: string }) => {
-  const isTelemetry = p.id === '04';
-  const connectTerm = isTelemetry ? "telephony base stations" : "unserved households and small businesses";
-  
-  return `The project on completion will ${isTelemetry ? `solarize ${p.connections}` : `electrify up to ${p.connections}`} ${isTelemetry ? "" : "unserved households and small businesses"}, create up to ${p.jobs} whilst enhancing access to renewable energy for productive uses, and avoid ${p.ghg} of GHG emissions.
-
-The ${p.id === '02' ? '4 hybrid-solar mini-grids' : p.id === '04' ? '120 solar telephony sites' : 'solar-hybrid mini-grids'} will have environmental benefits of climate change mitigation, energy savings and greenhouse gas reduction and simultaneously have a positive direct contribution to the United Nations Sustainable Development Goals (SDGs) 7, 8, 9, 11, 13 and 17 as identified in the Green Bond Framework.`;
-};
-
 interface PageProps {
-  params: Promise<{ id: string }>;
+  project: ProjectDetail;
+  /** Every other case study, for the related-projects rail. */
+  related: ProjectDetail[];
+  prev: ProjectDetail;
+  next: ProjectDetail;
 }
 
-export default function ProjectDetailPage({ params }: PageProps) {
-  const resolvedParams = use(params);
-  const projectId = resolvedParams.id || '01';
+export default function ProjectDetailPage({ project, related, prev, next }: PageProps) {
+  const projectId = project.projectId ?? '';
+  const gallery = project.gallery ?? [];
 
-  const project = projects[projectId] || projects["01"];
-
-  const projectIds = ["01", "02", "03", "04", "05", "06"];
-  const currentIndex = projectIds.indexOf(projectId);
-  const prevId = projectIds[(currentIndex - 1 + projectIds.length) % projectIds.length];
-  const nextId = projectIds[(currentIndex + 1) % projectIds.length];
-
-  const filteredRelated = Object.values(projects).filter(p => p.id !== project.id);
+  const filteredRelated = related;
   const [hoveredGalleryIndex, setHoveredGalleryIndex] = useState<number>(1);
-  const activeStates = PROJECT_STATES[project.id] || [];
+  const activeStates = parseCsv(project.states);
   const [selectedState, setSelectedState] = useState<string | null>(null);
 
   useEffect(() => {
-    const states = PROJECT_STATES[projectId] || [];
+    const states = parseCsv(project.states);
     setSelectedState(states.length > 0 ? states[0] : null);
-  }, [projectId]);
+  }, [project.states]);
 
   // V20 Related Projects Scroller State
   const [startIndex, setStartIndex] = useState<number>(0);
@@ -235,7 +206,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
       "amount": project.capital,
       "currency": "NGN"
     },
-    "identifier": project.id,
+    "identifier": projectId,
     "category": project.category,
     "status": project.status,
     "capacity": project.capacity,
@@ -248,21 +219,21 @@ export default function ProjectDetailPage({ params }: PageProps) {
     <div className="bg-[#FAFDFB] text-brand-dark min-h-screen relative overflow-x-clip font-sans pb-0 text-left">
       {/* Dynamic Metadata Hoisting (React 19 / Next.js) */}
       <title>{`${project.title} | Climate Finance Blending Facility`}</title>
-      <meta name="description" content={project.desc} />
-      <meta property="og:title" content={project.title} />
-      <meta property="og:description" content={project.desc} />
-      <meta property="og:image" content={project.image} />
+      <meta name="description" content={project.desc ?? ""} />
+      <meta property="og:title" content={project.title ?? ""} />
+      <meta property="og:description" content={project.desc ?? ""} />
+      <meta property="og:image" content={project.image ?? ""} />
       <meta property="og:type" content="website" />
       
       {/* Dublin Core Hoisting */}
-      <meta name="DC.title" content={project.title} />
+      <meta name="DC.title" content={project.title ?? ""} />
       <meta name="DC.creator" content="NoLimitBuzz" />
       <meta name="DC.subject" content={`${project.category}, ${project.location}`} />
-      <meta name="DC.description" content={project.desc} />
+      <meta name="DC.description" content={project.desc ?? ""} />
       <meta name="DC.publisher" content="Climate Finance Blending Facility" />
       <meta name="DC.language" content="en" />
-      <meta name="DC.coverage.spatial" content={project.location} />
-      <meta name="DC.identifier" content={project.id} />
+      <meta name="DC.coverage.spatial" content={project.location ?? ""} />
+      <meta name="DC.identifier" content={projectId} />
       <meta name="DC.type" content="Project Case Study" />
 
       {/* Schema.org JSON-LD */}
@@ -278,9 +249,9 @@ export default function ProjectDetailPage({ params }: PageProps) {
       {/* Floating Glassmorphism Hero Section */}
       <GlassHero
         title={project.title}
-        subtitle={`PROJECT CASE STUDY: / ${project.id}`}
-        bgImage={project.image}
-        currentPage={project.title.split(' ')[0]}
+        subtitle={`PROJECT CASE STUDY: / ${projectId}`}
+        bgImage={project.image ?? ""}
+        currentPage={(project.title ?? "").split(" ")[0]}
         parent={{ label: 'projects', href: '/projects' }}
         fade="dark"
       >
@@ -313,31 +284,31 @@ export default function ProjectDetailPage({ params }: PageProps) {
           >
             <ProjectBentoMetric 
               label="CAPACITY INSTALLED" 
-              value={project.capacity} 
+              value={project.capacity ?? ""} 
               desc="installed green capacity de-risked by first-loss co-financing." 
               colSpan="md:col-span-2"
             />
             <ProjectBentoMetric 
               label="EMISSIONS AVOIDED" 
-              value={project.ghg} 
+              value={project.ghg ?? ""} 
               desc="tonnes of greenhouse gas emissions offset annually by the project." 
               colSpan="md:col-span-2"
             />
             <ProjectBentoMetric 
               label="JOB CREATION" 
-              value={project.jobs} 
+              value={project.jobs ?? ""} 
               desc="sustainable direct and indirect jobs facilitated in local communities." 
               colSpan="md:col-span-2"
             />
             <ProjectBentoMetric 
               label="CONNECTIONS POWERED" 
-              value={project.connections} 
+              value={project.connections ?? ""} 
               desc="projected household and SME connections powered across Nigeria." 
               colSpan="md:col-span-3"
             />
             <ProjectBentoMetric 
               label="CAPITAL DEPLOYED" 
-              value={project.capital} 
+              value={project.capital ?? ""} 
               desc="mobilized from institutional investors and pension funds into the real economy." 
               isDark={true}
               colSpan="md:col-span-3"
@@ -367,7 +338,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                   Project description
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold font-sans text-white tracking-tight leading-tight">
-                  {project.intro.title}
+                  {project.introTitle}
                 </h2>
                 <p className="text-gray-300 font-sans font-light leading-relaxed text-sm md:text-base mt-4 max-w-4xl">
                   {project.desc}
@@ -380,7 +351,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
               {/* Nigeria Map Column */}
               <div className="lg:col-span-7">
                 <InteractiveNigeriaMap 
-                  projectId={project.id} 
+                  projectId={projectId} 
                   activeStates={activeStates} 
                   selectedState={selectedState} 
                   setSelectedState={setSelectedState} 
@@ -466,7 +437,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
             >
               <div className="space-y-6">
                 <div className="border-b border-gray-200 pb-4">
-                  <span className="text-[10px] font-bold text-[#00A788] uppercase tracking-[0.25em] font-mono block mb-1">Project ID / {project.id}</span>
+                  <span className="text-[10px] font-bold text-[#00A788] uppercase tracking-[0.25em] font-mono block mb-1">Project ID / {projectId}</span>
                   <h3 className="text-2xl font-bold font-sans tracking-tight">
                     {project.title}
                   </h3>
@@ -491,7 +462,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 <div className="grid grid-cols-2 gap-6 border border-gray-100 bg-[#F3FAF6] rounded-[6px] p-6 text-sm font-sans mt-8">
                   <div>
                     <span className="text-gray-500 block mb-1.5 font-mono uppercase text-[9px] tracking-widest font-bold">Financial Close</span>
-                    <span className="text-[#051F1A] font-extrabold font-mono text-base">{project.year.split(' ').pop()}</span>
+                    <span className="text-[#051F1A] font-extrabold font-mono text-base">{(project.year ?? "").split(" ").pop()}</span>
                   </div>
                   <div>
                     <span className="text-gray-500 block mb-1.5 font-mono uppercase text-[9px] tracking-widest font-bold">Private Capital Mobilised</span>
@@ -504,7 +475,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
               <div className="border-t border-gray-200 pt-6">
                 <span className="text-[9px] font-bold text-gray-400 block mb-3 uppercase tracking-wider font-mono">Aligned SDG Goals</span>
                 <div className="flex flex-wrap gap-2.5">
-                  {getProjectSDGs(project.id).map(sdgNum => {
+                  {parseSdgs(project.sdgs).map(sdgNum => {
                     const sdg = SDG_INFO[sdgNum as keyof typeof SDG_INFO];
                     if (!sdg) return null;
                     return (
@@ -566,7 +537,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                   <div className="space-y-3 text-xs">
                     <div className="flex justify-between border-b border-gray-200/50 pb-2">
                       <span className="text-gray-500 font-mono">Instrument Type</span>
-                      <span className="text-[#051F1A] font-bold text-right ml-2">{project.category === 'Telecoms' ? 'Infrastructure Bond' : project.id === '03' ? 'Sukuk Lease Sukuk' : 'Co-financing / Bond'}</span>
+                      <span className="text-[#051F1A] font-bold text-right ml-2">{project.financingInstrument}</span>
                     </div>
                     <div className="flex justify-between border-b border-gray-200/50 pb-2">
                       <span className="text-gray-500 font-mono">Credit Rating</span>
@@ -646,7 +617,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
             {/* Image 01 (Middle) */}
             <div className="rounded-[6px] overflow-hidden border border-white/10 h-[320px] w-full shadow-[0_8px_30px_rgba(0,0,0,0.3)] group cursor-pointer relative bg-[#021814]">
               <img 
-                src={project.gallery[0]?.image || project.image} 
+                src={gallery[0]?.image || project.image} 
                 alt="Renewable energy preview" 
                 className="w-full h-full object-cover filter grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-500"
               />
@@ -672,7 +643,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
             {/* Image 02 (Middle) */}
             <div className="rounded-[6px] overflow-hidden border border-white/10 h-[320px] w-full shadow-[0_8px_30px_rgba(0,0,0,0.3)] group cursor-pointer relative bg-[#021814]">
               <img 
-                src={project.gallery[1]?.image || project.image} 
+                src={gallery[1]?.image || project.image} 
                 alt="Ecology and gender jobs preview" 
                 className="w-full h-full object-cover filter grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-500"
               />
@@ -846,13 +817,13 @@ export default function ProjectDetailPage({ params }: PageProps) {
             
             <div className="flex gap-2">
               <button 
-                onClick={() => setHoveredGalleryIndex(prev => (prev - 1 + project.gallery.length) % project.gallery.length)}
+                onClick={() => setHoveredGalleryIndex(prev => (prev - 1 + gallery.length) % gallery.length)}
                 className="w-10 h-10 rounded-full border border-gray-200 bg-white hover:border-[#00A788] flex items-center justify-center text-gray-500 hover:text-[#00A788] transition-all duration-300 focus:outline-none interactive shadow-sm"
               >
                 <ChevronLeft size={18} />
               </button>
               <button 
-                onClick={() => setHoveredGalleryIndex(prev => (prev + 1) % project.gallery.length)}
+                onClick={() => setHoveredGalleryIndex(prev => (prev + 1) % gallery.length)}
                 className="w-10 h-10 rounded-full border border-gray-200 bg-white hover:border-[#00A788] flex items-center justify-center text-gray-500 hover:text-[#00A788] transition-all duration-300 focus:outline-none interactive shadow-sm"
               >
                 <ChevronRight size={18} />
@@ -861,7 +832,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
           </motion.div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center mb-10 pt-4">
-            {project.gallery.map((item, idx) => {
+            {gallery.map((item: GalleryItem, idx: number) => {
               const isActive = hoveredGalleryIndex === idx;
               return (
                 <div 
@@ -892,13 +863,13 @@ export default function ProjectDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-3 flex-1 text-center md:text-left">
               <CheckCircle size={18} className="text-[#00A788] shrink-0 mx-auto md:mx-0" />
               <p className="text-sm font-sans text-gray-600 max-w-xl">
-                {project.gallery[hoveredGalleryIndex]?.caption}
+                {gallery[hoveredGalleryIndex]?.caption}
               </p>
             </div>
 
             <div className="flex items-center gap-6 min-w-[200px] justify-end">
               <div className="flex gap-1.5 h-1 w-24">
-                {project.gallery.map((_, idx) => (
+                {gallery.map((_: GalleryItem, idx: number) => (
                   <button 
                     key={idx} 
                     onClick={() => setHoveredGalleryIndex(idx)}
@@ -909,7 +880,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 ))}
               </div>
               <span className="text-sm font-mono text-gray-500">
-                <strong className="text-[#051F1A] font-sans">{hoveredGalleryIndex + 1}</strong> / {project.gallery.length}
+                <strong className="text-[#051F1A] font-sans">{hoveredGalleryIndex + 1}</strong> / {gallery.length}
               </span>
             </div>
           </div>
@@ -920,7 +891,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-6 border-t border-gray-200">
         <div className="flex items-center justify-between gap-4">
           <Link 
-            href={`/projects/${prevId}`}
+            href={`/projects/${prev.projectId}`}
             className="flex items-center gap-3 text-brand-dark hover:text-brand-primary group max-w-xs text-left"
           >
             <div className="w-10 h-10 rounded-full border border-gray-200 hover:border-brand-primary flex items-center justify-center text-gray-400 group-hover:text-brand-primary transition-colors shrink-0">
@@ -928,17 +899,17 @@ export default function ProjectDetailPage({ params }: PageProps) {
             </div>
             <div className="hidden md:block leading-tight text-left">
               <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block font-mono">Previous Project</span>
-              <span className="font-extrabold text-xs line-clamp-1">{projects[prevId]?.title}</span>
+              <span className="font-extrabold text-xs line-clamp-1">{prev.title}</span>
             </div>
           </Link>
 
           <Link 
-            href={`/projects/${nextId}`}
+            href={`/projects/${next.projectId}`}
             className="flex items-center gap-3 text-brand-dark hover:text-brand-primary group max-w-xs text-right"
           >
             <div className="hidden md:block leading-tight text-right">
               <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block font-mono">Next Project</span>
-              <span className="font-extrabold text-xs line-clamp-1">{projects[nextId]?.title}</span>
+              <span className="font-extrabold text-xs line-clamp-1">{next.title}</span>
             </div>
             <div className="w-10 h-10 rounded-full border border-gray-200 hover:border-brand-primary flex items-center justify-center text-gray-400 group-hover:text-brand-primary transition-colors shrink-0">
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -999,7 +970,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                 if (!rp) return null;
                 return (
                   <motion.div 
-                    key={rp.id}
+                    key={rp.projectId}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
@@ -1009,16 +980,16 @@ export default function ProjectDetailPage({ params }: PageProps) {
                     {/* Header Row */}
                     <div className="flex items-center justify-between p-5 border-b border-[#144D3F]/50 bg-[#03241D]/30">
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-[#81C34D] font-mono bg-[#03241D] border border-[#1E5E4E] px-2.5 py-0.5 rounded-[6px] font-bold">/ {rp.id}</span>
+                        <span className="text-xs text-[#81C34D] font-mono bg-[#03241D] border border-[#1E5E4E] px-2.5 py-0.5 rounded-[6px] font-bold">/ {rp.projectId}</span>
                         <Link 
-                          href={`/projects/${rp.id}`}
+                          href={`/projects/${rp.projectId}`}
                           className="font-extrabold text-sm text-[#81C34D] hover:text-white transition-colors leading-tight font-sans cursor-pointer"
                         >
                           {rp.title}
                         </Link>
                       </div>
                       <div className="text-[10px] text-gray-500 font-mono flex items-center gap-2 shrink-0">
-                        <span className="font-semibold">{rp.location.split(',')[0].toUpperCase()}</span>
+                        <span className="font-semibold">{(rp.location ?? "").split(",")[0].toUpperCase()}</span>
                         <span>•</span>
                         <span className="font-mono">{rp.capacity}</span>
                       </div>
@@ -1044,7 +1015,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                         <div className="grid grid-cols-2 gap-3 border border-[#143c33] bg-[#021814]/60 backdrop-blur-md rounded-[6px] p-3 text-[10px] font-sans">
                           <div>
                             <span className="text-gray-500 block uppercase font-bold text-[8px] font-mono tracking-wider">Financial Close</span>
-                            <span className="text-white font-extrabold font-mono">{rp.year.split(' ').pop()}</span>
+                            <span className="text-white font-extrabold font-mono">{(rp.year ?? "").split(" ").pop()}</span>
                           </div>
                           <div>
                             <span className="text-gray-500 block uppercase font-bold text-[8px] font-mono tracking-wider">Private Capital</span>
@@ -1054,7 +1025,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
 
                         {/* SDG Icons */}
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                          {getProjectSDGs(rp.id).map(sdgNum => {
+                          {parseSdgs(rp.sdgs).map(sdgNum => {
                             const sdg = SDG_INFO[sdgNum as keyof typeof SDG_INFO];
                             if (!sdg) return null;
                             return (
@@ -1070,7 +1041,7 @@ export default function ProjectDetailPage({ params }: PageProps) {
                         </div>
 
                         <Link 
-                          href={`/projects/${rp.id}`}
+                          href={`/projects/${rp.projectId}`}
                           className="self-start flex items-center gap-1.5 text-[10px] font-bold text-[#81C34D] border-b border-[#81C34D]/30 pb-0.5 hover:border-[#81C34D] hover:text-white transition-all uppercase tracking-wider mt-2 focus:outline-none interactive"
                         >
                           Explore Project Details ↗

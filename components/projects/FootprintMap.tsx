@@ -6,17 +6,11 @@ import { MapPin, ChevronRight, Search, X } from 'lucide-react';
 // @ts-ignore
 import nigeriaMapData from '@svg-maps/nigeria';
 
-import {
-  ALL_STATES,
-  STATE_LGAS,
-  LGA_PROJECTS,
-  PROJECT_TYPE_LEGEND,
-  StateInfo,
-  LGAProjectEntry,
-  getProjectTypeColor,
-  getStateByMapId,
-  getLGAsForState,
-} from '@/lib/mapData';
+import type {
+  FootprintMapSection,
+  LgaModalSection,
+  LgaProjectItem,
+} from '@/lib/strapi-projects-types';
 import LGAModal from './LGAModal';
 
 interface NigeriaStateLocation {
@@ -24,6 +18,18 @@ interface NigeriaStateLocation {
   name: string;
   path: string;
 }
+
+/**
+ * Everything on the footprint-map section, plus the LGA modal's copy — the
+ * modal is rendered from here, so its section is passed straight through.
+ *
+ * `mapSvg` is intentionally unused: the outline comes from @svg-maps/nigeria's
+ * viewBox + locations, which is what the interaction model (per-state paths,
+ * centroid tooltips) is built on. There is nowhere to inject raw markup.
+ */
+type FootprintMapProps = Omit<FootprintMapSection, '__component'> & {
+  lgaModal?: Omit<LgaModalSection, '__component'>;
+};
 
 // State centroid map (approx. centre points in the 744×600 SVG viewBox)
 // Used for the state name tooltip on the map
@@ -67,33 +73,86 @@ const STATE_CENTROIDS: Record<string, { x: number; y: number }> = {
   zamfara:       { x: 270, y: 105 },
 };
 
-export default function FootprintMap() {
+export default function FootprintMap({
+  eyebrow,
+  headingPartOne,
+  headingHighlight,
+  body,
+  statesStatLabel,
+  communitiesStatLabel,
+  statesColumnLabel,
+  searchPlaceholder,
+  mapLabel,
+  mapHint,
+  lgaPanelSuffix,
+  lgaEmptyMessage,
+  clearSelectionLabel,
+  placeholderTitle,
+  placeholderBody,
+  legend,
+  states,
+  lgaProjects,
+  lgaModal,
+}: FootprintMapProps) {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [selectedLGA, setSelectedLGA] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [stateSearch, setStateSearch] = useState('');
 
+  const allStates = useMemo(() => states ?? [], [states]);
+  const legendItems = useMemo(() => legend ?? [], [legend]);
+
+  const statesByMapId = useMemo(
+    () => new Map(allStates.map(state => [state.mapId, state])),
+    [allStates]
+  );
+
+  /** The CMS stores LGA projects as one flat list; the panel needs them by LGA. */
+  const projectsByLGA = useMemo(() => {
+    const grouped = new Map<string, LgaProjectItem[]>();
+    for (const entry of lgaProjects ?? []) {
+      if (!entry.lga) continue;
+      const bucket = grouped.get(entry.lga);
+      if (bucket) bucket.push(entry);
+      else grouped.set(entry.lga, [entry]);
+    }
+    return grouped;
+  }, [lgaProjects]);
+
+  const colorByProjectType = useMemo(
+    () => new Map(legendItems.map(item => [item.type, item.color])),
+    [legendItems]
+  );
+
+  const defaultTypeColor = useMemo(
+    () => legendItems.find(item => item.type === 'default')?.color,
+    [legendItems]
+  );
+
   const selectedStateInfo = useMemo(
-    () => (selectedState ? getStateByMapId(selectedState) : null),
-    [selectedState]
+    () => (selectedState ? statesByMapId.get(selectedState) ?? null : null),
+    [selectedState, statesByMapId]
   );
 
   const currentLGAs = useMemo(
-    () => (selectedState ? getLGAsForState(selectedState) : []),
-    [selectedState]
+    () =>
+      (selectedStateInfo?.lgas ?? [])
+        .map(lga => lga.name)
+        .filter((name): name is string => Boolean(name)),
+    [selectedStateInfo]
   );
 
-  const modalProjects: LGAProjectEntry[] = useMemo(
-    () => (selectedLGA ? LGA_PROJECTS[selectedLGA] ?? [] : []),
-    [selectedLGA]
+  const modalProjects: LgaProjectItem[] = useMemo(
+    () => (selectedLGA ? projectsByLGA.get(selectedLGA) ?? [] : []),
+    [selectedLGA, projectsByLGA]
   );
 
   const filteredStates = useMemo(() => {
     const q = stateSearch.toLowerCase().trim();
-    if (!q) return ALL_STATES;
-    return ALL_STATES.filter(s => s.name.toLowerCase().includes(q));
-  }, [stateSearch]);
+    if (!q) return allStates;
+    return allStates.filter(s => (s.name ?? '').toLowerCase().includes(q));
+  }, [stateSearch, allStates]);
 
   const handleStateSelect = useCallback((mapId: string) => {
     setSelectedState(prev => (prev === mapId ? null : mapId));
@@ -112,7 +171,7 @@ export default function FootprintMap() {
   const getPathStyle = (loc: NigeriaStateLocation) => {
     const isSelected = selectedState === loc.id;
     const isHovered = hoveredState === loc.id;
-    const stateInfo = getStateByMapId(loc.id);
+    const stateInfo = statesByMapId.get(loc.id);
     const hasProjects = stateInfo?.hasProjects ?? false;
 
     if (isSelected) {
@@ -126,7 +185,7 @@ export default function FootprintMap() {
     }
     if (hasProjects && stateInfo?.projectType) {
       return {
-        fill: getProjectTypeColor(stateInfo.projectType),
+        fill: colorByProjectType.get(stateInfo.projectType) ?? defaultTypeColor,
         stroke: 'rgba(255,255,255,0.18)',
         strokeWidth: 0.8,
       };
@@ -134,8 +193,9 @@ export default function FootprintMap() {
     return { fill: 'rgba(255,255,255,0.03)', stroke: 'rgba(255,255,255,0.10)', strokeWidth: 0.7 };
   };
 
-  const totalStates = ALL_STATES.filter(s => s.hasProjects && s.mapId !== 'fct').length;
-  const totalCommunities = Object.values(LGA_PROJECTS).reduce((sum, arr) => sum + arr.length, 0);
+  // FCT is a territory, not a state, so it is excluded from the states count.
+  const totalStates = allStates.filter(s => s.hasProjects && s.mapId !== 'fct').length;
+  const totalCommunities = (lgaProjects ?? []).length;
 
   return (
     <>
@@ -145,25 +205,24 @@ export default function FootprintMap() {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#81C34D]" />
-            <span className="text-[#81C34D] text-xs font-semibold tracking-[0.2em] uppercase font-mono">National Footprint</span>
+            <span className="text-[#81C34D] text-xs font-semibold tracking-[0.2em] uppercase font-mono">{eyebrow}</span>
           </div>
           <h2 className="text-3xl font-bold font-sans tracking-tight mb-3">
-            Geographical <span className="text-[#9BB7B1]">Distribution</span>
+            {headingPartOne} <span className="text-[#9BB7B1]">{headingHighlight}</span>
           </h2>
           <p className="text-gray-400 text-sm leading-relaxed max-w-lg font-sans font-light">
-            Off-grid renewable energy and rural telephony projects located across the
-            six geo-political zones in Nigeria, approved for co-financing by the Facility.
+            {body}
           </p>
         </div>
         {/* Right: stats */}
         <div className="flex gap-8 sm:flex-col sm:items-end sm:gap-4 shrink-0">
           <div className="sm:text-right">
             <span className="text-4xl font-extrabold text-[#81C34D] font-sans">{totalStates}</span>
-            <p className="text-gray-400 text-xs uppercase tracking-wider font-mono mt-0.5">States</p>
+            <p className="text-gray-400 text-xs uppercase tracking-wider font-mono mt-0.5">{statesStatLabel}</p>
           </div>
           <div className="sm:text-right">
             <span className="text-4xl font-extrabold text-[#81C34D] font-sans">{totalCommunities}+</span>
-            <p className="text-gray-400 text-xs uppercase tracking-wider font-mono mt-0.5">Communities</p>
+            <p className="text-gray-400 text-xs uppercase tracking-wider font-mono mt-0.5">{communitiesStatLabel}</p>
           </div>
         </div>
       </div>
@@ -175,7 +234,7 @@ export default function FootprintMap() {
         <div className="lg:col-span-3 border-r border-white/8 flex flex-col">
           {/* Header */}
           <div className="px-4 py-3 border-b border-white/8 bg-white/[0.02] flex-shrink-0">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 font-mono mb-2">States</h3>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 font-mono mb-2">{statesColumnLabel}</h3>
             {/* Search */}
             <div className="relative">
               <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" />
@@ -183,7 +242,7 @@ export default function FootprintMap() {
                 type="text"
                 value={stateSearch}
                 onChange={e => setStateSearch(e.target.value)}
-                placeholder="Search states…"
+                placeholder={searchPlaceholder}
                 className="w-full bg-white/[0.03] border border-white/8 rounded-[6px] pl-7 pr-3 py-1.5 text-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#81C34D]/40 font-sans transition-colors"
               />
               {stateSearch && (
@@ -199,11 +258,11 @@ export default function FootprintMap() {
             <ul className="divide-y divide-white/[0.04]">
               {filteredStates.map(state => {
                 const isActive = selectedState === state.mapId;
-                const hasProj = state.hasProjects;
+                const hasProj = state.hasProjects ?? false;
                 return (
-                  <li key={state.mapId}>
+                  <li key={state.mapId ?? state.id}>
                     <button
-                      onClick={() => hasProj && handleStateSelect(state.mapId)}
+                      onClick={() => hasProj && state.mapId && handleStateSelect(state.mapId)}
                       disabled={!hasProj}
                       className={`w-full text-left px-4 py-2.5 flex items-center justify-between group transition-all duration-200 focus:outline-none ${
                         isActive
@@ -239,7 +298,7 @@ export default function FootprintMap() {
           {/* Map label */}
           <div className="absolute top-3 left-3 z-10">
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-600 font-mono">
-              Interactive Map
+              {mapLabel}
             </span>
           </div>
 
@@ -247,7 +306,7 @@ export default function FootprintMap() {
           {!selectedState && (
             <div className="absolute top-3 right-3 z-10">
               <span className="text-[9px] font-bold uppercase tracking-widest text-gray-700 font-mono hidden md:block">
-                Click a state
+                {mapHint}
               </span>
             </div>
           )}
@@ -261,7 +320,7 @@ export default function FootprintMap() {
               >
                 {(nigeriaMapData.locations as NigeriaStateLocation[]).map(loc => {
                   const style = getPathStyle(loc);
-                  const stateInfo = getStateByMapId(loc.id);
+                  const stateInfo = statesByMapId.get(loc.id);
                   const hasProjects = stateInfo?.hasProjects ?? false;
 
                   return (
@@ -338,8 +397,8 @@ export default function FootprintMap() {
           {/* Legend */}
           <div className="flex-shrink-0 border-t border-white/[0.06] px-4 py-3">
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {PROJECT_TYPE_LEGEND.map(item => (
-                <div key={item.type} className="flex items-center gap-1.5">
+              {legendItems.map((item, idx) => (
+                <div key={item.type ?? idx} className="flex items-center gap-1.5">
                   <div
                     className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0"
                     style={{ backgroundColor: item.color, opacity: 0.85 }}
@@ -368,7 +427,7 @@ export default function FootprintMap() {
                 {/* LGA Column Header */}
                 <div className="px-4 py-3 border-b border-white/8 bg-white/[0.02] flex-shrink-0">
                   <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 font-mono">
-                    {selectedStateInfo.name} State (LGA's)
+                    {selectedStateInfo.name} {lgaPanelSuffix}
                   </p>
                 </div>
 
@@ -377,7 +436,7 @@ export default function FootprintMap() {
                   {currentLGAs.length > 0 ? (
                     <ul className="divide-y divide-white/[0.04]">
                       {currentLGAs.map((lga, idx) => {
-                        const hasData = Boolean(LGA_PROJECTS[lga] && LGA_PROJECTS[lga].length > 0);
+                        const hasData = (projectsByLGA.get(lga)?.length ?? 0) > 0;
                         return (
                           <li key={idx}>
                             <button
@@ -408,7 +467,7 @@ export default function FootprintMap() {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full py-12 text-center px-4">
                       <MapPin size={24} className="text-gray-600 mb-2" />
-                      <p className="text-gray-500 text-xs font-sans">No LGA data found for this state.</p>
+                      <p className="text-gray-500 text-xs font-sans">{lgaEmptyMessage}</p>
                     </div>
                   )}
                 </div>
@@ -419,7 +478,7 @@ export default function FootprintMap() {
                     onClick={() => setSelectedState(null)}
                     className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-wider font-mono transition-colors flex items-center gap-1 focus:outline-none"
                   >
-                    <X size={10} /> Clear Selection
+                    <X size={10} /> {clearSelectionLabel}
                   </button>
                 </div>
               </motion.div>
@@ -435,9 +494,9 @@ export default function FootprintMap() {
                 <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/8 flex items-center justify-center mb-1">
                   <MapPin size={20} className="text-gray-600" />
                 </div>
-                <h4 className="text-sm font-semibold text-gray-400 font-sans">Select a State</h4>
+                <h4 className="text-sm font-semibold text-gray-400 font-sans">{placeholderTitle}</h4>
                 <p className="text-xs text-gray-600 leading-relaxed font-sans max-w-[180px]">
-                  Click a state from the list or on the map to view its Local Government Areas.
+                  {placeholderBody}
                 </p>
               </motion.div>
             )}
@@ -451,6 +510,7 @@ export default function FootprintMap() {
         lga={selectedLGA ?? ''}
         stateName={selectedStateInfo?.name ?? ''}
         projects={modalProjects}
+        copy={lgaModal}
         onClose={handleCloseModal}
       />
     </>

@@ -4,38 +4,36 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Building2, MapPin, Zap } from 'lucide-react';
-import { LGAProjectEntry } from '@/lib/mapData';
+import type {
+  LgaModalSection,
+  LgaProjectItem,
+} from '@/lib/strapi-projects-types';
+
+/** All copy — labels, column heads, per-project-type icons and hero art. */
+export type LGAModalCopy = Omit<LgaModalSection, '__component'>;
 
 interface LGAModalProps {
   isOpen: boolean;
 
   lga: string;
   stateName: string;
-  projects: LGAProjectEntry[];
+  projects: LgaProjectItem[];
+  copy?: LGAModalCopy;
   onClose: () => void;
 }
 
-const PROJECT_TYPE_ICON: Record<string, string> = {
-  'Solar Hybrid Mini-Grid': '⚡',
-  'Isolated Minigrids': '🔋',
-  'Solar as a Service for Telecom Towers': '📡',
-  'Agro-Processing Solar Hub': '🌾',
-  'Mini Grids - Markets': '🏪',
-};
+/**
+ * Hero art is chosen from the first project's type, with the row whose
+ * projectType is "default" as the catch-all.
+ */
+function getHeroImage(projects: LgaProjectItem[], copy?: LGAModalCopy) {
+  const images = copy?.heroImages ?? [];
+  const fallback = images.find((entry) => entry.projectType === 'default');
 
-const HERO_IMAGES: Record<string, string> = {
-  'Solar as a Service for Telecom Towers':
-    'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?q=80&w=1200&auto=format&fit=crop',
-  'Agro-Processing Solar Hub':
-    'https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=1200&auto=format&fit=crop',
-  default:
-    'https://images.unsplash.com/photo-1509391366360-2e959784a276?q=80&w=1200&auto=format&fit=crop',
-};
+  if (!projects.length) return fallback?.image;
 
-function getHeroImage(projects: LGAProjectEntry[]) {
-  if (!projects.length) return HERO_IMAGES.default;
-  const type = projects[0].projectType;
-  return HERO_IMAGES[type] ?? HERO_IMAGES.default;
+  const type = projects[0]?.projectType;
+  return images.find((entry) => entry.projectType === type)?.image ?? fallback?.image;
 }
 
 export default function LGAModal({
@@ -43,6 +41,7 @@ export default function LGAModal({
   lga,
   stateName,
   projects,
+  copy,
   onClose,
 }: LGAModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -70,7 +69,9 @@ export default function LGAModal({
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  const heroBg = getHeroImage(projects);
+  const heroBg = getHeroImage(projects, copy);
+  const columnHeads = copy?.columnHeads ?? [];
+  const projectTypeIcons = copy?.projectTypeIcons ?? [];
 
   if (!mounted) return null;
 
@@ -117,7 +118,7 @@ export default function LGAModal({
               <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 text-center">
                 <h2 className="text-3xl font-extrabold text-white tracking-tight font-sans">{lga}</h2>
                 <p className="text-[#81C34D] text-xs font-bold uppercase tracking-[0.2em] mt-1 font-mono">
-                  Project Data · {stateName} State
+                  {copy?.subtitlePrefix} · {stateName} {copy?.subtitleStateSuffix}
                 </p>
               </div>
               {/* Close Button */}
@@ -136,7 +137,7 @@ export default function LGAModal({
                 <div className="px-6 py-3 flex items-center gap-2">
                   <Building2 size={14} className="text-[#81C34D]" />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">Developers</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">{copy?.statLabelDevelopers}</p>
                     <p className="text-base font-bold text-white font-sans">
                       {[...new Set(projects.map(p => p.developer))].length}
                     </p>
@@ -145,16 +146,16 @@ export default function LGAModal({
                 <div className="px-6 py-3 flex items-center gap-2">
                   <MapPin size={14} className="text-[#FDB713]" />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">Communities</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">{copy?.statLabelCommunities}</p>
                     <p className="text-base font-bold text-white font-sans">{projects.length}</p>
                   </div>
                 </div>
                 <div className="px-6 py-3 flex items-center gap-2">
                   <Zap size={14} className="text-[#56C36A]" />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">PUE Potential</p>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 font-mono">{copy?.statLabelPuePotential}</p>
                     <p className="text-base font-bold text-white font-sans">
-                      {projects.reduce((s, p) => s + p.puePotential, 0)}
+                      {projects.reduce((s, p) => s + (p.puePotential ?? 0), 0)}
                     </p>
                   </div>
                 </div>
@@ -166,20 +167,31 @@ export default function LGAModal({
               {projects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center px-8">
                   <MapPin size={32} className="text-brand-accent/30 mb-3" />
-                  <p className="text-gray-400 text-sm font-sans">No project data available for this LGA yet.</p>
-                  <p className="text-gray-600 text-xs font-sans mt-1">Data will populate once connected to the CFBF data API.</p>
+                  <p className="text-gray-400 text-sm font-sans">{copy?.emptyTitle}</p>
+                  <p className="text-gray-600 text-xs font-sans mt-1">{copy?.emptyBody}</p>
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-white/[0.04] backdrop-blur-sm border-b border-white/5 text-xs font-bold uppercase tracking-wider text-gray-400 font-mono">
-                      <th className="p-4 pl-6">Developer</th>
-                      <th className="p-4">Community</th>
-                      <th className="p-4">State</th>
-                      <th className="p-4">LGA</th>
-                      <th className="p-4">Project Type</th>
-                      <th className="p-4 text-center">PUE Potential</th>
-                      <th className="p-4 pr-6 text-center">Enumerators</th>
+                      {/* Column order is fixed by the row markup below; the last
+                          two are numeric and centre-aligned. */}
+                      {columnHeads.map((head, idx) => (
+                        <th
+                          key={head.id ?? idx}
+                          className={
+                            idx === 0
+                              ? 'p-4 pl-6'
+                              : idx === columnHeads.length - 1
+                                ? 'p-4 pr-6 text-center'
+                                : idx >= 5
+                                  ? 'p-4 text-center'
+                                  : 'p-4'
+                          }
+                        >
+                          {head.label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04] font-sans text-gray-300 text-sm">
@@ -196,18 +208,21 @@ export default function LGAModal({
                         <td className="p-4 text-xs">{entry.lga}</td>
                         <td className="p-4">
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium">
-                            <span>{PROJECT_TYPE_ICON[entry.projectType] ?? '🔌'}</span>
+                            <span>
+                              {projectTypeIcons.find((i) => i.projectType === entry.projectType)?.icon ??
+                                copy?.fallbackIcon}
+                            </span>
                             <span className="text-gray-300">{entry.projectType}</span>
                           </span>
                         </td>
                         <td className="p-4 text-center">
-                          <span className={`text-xs font-bold font-mono ${entry.puePotential > 0 ? 'text-[#81C34D]' : 'text-gray-600'}`}>
-                            {entry.puePotential}
+                          <span className={`text-xs font-bold font-mono ${(entry.puePotential ?? 0) > 0 ? 'text-[#81C34D]' : 'text-gray-600'}`}>
+                            {entry.puePotential ?? 0}
                           </span>
                         </td>
                         <td className="p-4 pr-6 text-center">
-                          <span className={`text-xs font-bold font-mono ${entry.enumerators > 0 ? 'text-[#FDB713]' : 'text-gray-600'}`}>
-                            {entry.enumerators}
+                          <span className={`text-xs font-bold font-mono ${(entry.enumerators ?? 0) > 0 ? 'text-[#FDB713]' : 'text-gray-600'}`}>
+                            {entry.enumerators ?? 0}
                           </span>
                         </td>
                       </tr>
@@ -220,13 +235,13 @@ export default function LGAModal({
             {/* Footer */}
             <div className="flex-shrink-0 flex items-center justify-between border-t border-white/5 px-6 py-3 bg-white/[0.01]">
               <p className="text-xs text-gray-600 font-mono uppercase tracking-widest">
-                Source: CFBF Geographical Distribution Data
+                {copy?.sourceLabel}
               </p>
               <button
                 onClick={onClose}
                 className="text-[11px] font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-wider font-mono flex items-center gap-1 focus:outline-none"
               >
-                Close <X size={12} />
+                {copy?.closeLabel} <X size={12} />
               </button>
             </div>
           </motion.div>
