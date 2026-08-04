@@ -10,27 +10,44 @@ interface StateLocation {
   path: string;
 }
 
-export default function NigeriaMap() {
-  // Active project pipeline states
-  const activeStates = [
-    'gombe', 'nasarawa', 'edo', 'ondo', 'cross-river', 'akwa-ibom', 'benue', 'rivers', 'abia',
-    'kaduna', 'kano', 'oyo', 'bauchi', 'katsina', 'jigawa', 'sokoto', 'zamfara', 'kebbi',
-    'kogi', 'kwara', 'taraba', 'adamawa', 'borno', 'yobe', 'plateau', 'niger', 'ekiti',
-    'osun', 'ogun', 'lagos', 'fct'
-  ];
+interface Hotspot {
+  name?: string;
+  x: number;
+  y: number;
+}
 
-  // Coordinates matching the 744x600 viewBox of @svg-maps/nigeria
-  const hotspots = [
-    { name: 'Lagos', x: 85, y: 490 },
-    { name: 'Abuja', x: 320, y: 290 },
-    { name: 'Rivers', x: 290, y: 520 },
-    { name: 'Kano', x: 370, y: 110 },
-    { name: 'Gombe', x: 530, y: 200 },
-    { name: 'Ondo', x: 190, y: 430 },
-    { name: 'Cross River', x: 420, y: 480 },
-    { name: 'Edo', x: 230, y: 450 },
-    { name: 'Kaduna', x: 310, y: 200 }
-  ];
+interface NigeriaMapProps {
+  /** State ids to highlight. Defaults to the active project pipeline. */
+  activeStates?: string[];
+  /** Pulse markers, in the 744x600 viewBox of @svg-maps/nigeria. */
+  hotspots?: Hotspot[];
+}
+
+// Active project pipeline states
+const DEFAULT_ACTIVE_STATES = [
+  'gombe', 'nasarawa', 'edo', 'ondo', 'cross-river', 'akwa-ibom', 'benue', 'rivers', 'abia',
+  'kaduna', 'kano', 'oyo', 'bauchi', 'katsina', 'jigawa', 'sokoto', 'zamfara', 'kebbi',
+  'kogi', 'kwara', 'taraba', 'adamawa', 'borno', 'yobe', 'plateau', 'niger', 'ekiti',
+  'osun', 'ogun', 'lagos', 'fct'
+];
+
+// Coordinates matching the 744x600 viewBox of @svg-maps/nigeria
+const DEFAULT_HOTSPOTS: Hotspot[] = [
+  { name: 'Lagos', x: 85, y: 490 },
+  { name: 'Abuja', x: 320, y: 290 },
+  { name: 'Rivers', x: 290, y: 520 },
+  { name: 'Kano', x: 370, y: 110 },
+  { name: 'Gombe', x: 530, y: 200 },
+  { name: 'Ondo', x: 190, y: 430 },
+  { name: 'Cross River', x: 420, y: 480 },
+  { name: 'Edo', x: 230, y: 450 },
+  { name: 'Kaduna', x: 310, y: 200 }
+];
+
+export default function NigeriaMap({
+  activeStates = DEFAULT_ACTIVE_STATES,
+  hotspots = DEFAULT_HOTSPOTS,
+}: NigeriaMapProps = {}) {
 
   return (
     <div className="relative w-full max-w-2xl mx-auto aspect-[744/600] overflow-visible">

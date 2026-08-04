@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, List, Play, Clock } from 'lucide-react';
 import SectionHeader from '@/components/ui/SectionHeader';
+import type { StoriesSection } from '@/lib/strapi-types';
+
+type StoriesProps = Omit<StoriesSection, '__component'>;
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 const fadeUp = (delay = 0) => ({
@@ -13,51 +16,36 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.75, ease: EASE, delay },
 });
 
-export default function FeaturedStories() {
-  const [viewMode, setViewMode] = useState('card');
+/** View-toggle icons are presentational; the CMS only supplies tabId + label. */
+const VIEW_TAB_ICONS: Record<string, React.ElementType> = {
+  card: LayoutGrid,
+  list: List,
+};
 
-  const stories = [
-    {
-      title: "Meet Felicia Adindu-End User, Darway Coast",
-      role: "Community Voice",
-      location: "Rivers State",
-      type: "Video Testimonial",
-      image: "https://images.unsplash.com/photo-1509391366360-2e959784a276?q=80&w=800&auto=format&fit=crop",
-      excerpt: "In Akpoku, Rivers State, Felicia Adindu once struggled with unreliable energy. Now, clean solar power has transformed her daily life and business.",
-      duration: "4:32 mins"
-    },
-    {
-      title: "ACOB Lighting Solar Powered Rural Electrification Project",
-      role: "Developer",
-      location: "Akwa-Ibom & Benue States",
-      type: "Video Testimonial",
-      image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=800&auto=format&fit=crop",
-      excerpt: "Investing in clean energy means investing in communities. How ACOB Lighting is powering local development in northern regions.",
-      duration: "3:15 mins"
-    },
-    {
-      title: "Prado Power Solar Powered Rural Electrification Project",
-      role: "Developer",
-      location: "Cross River State",
-      type: "Video Testimonial",
-      image: "https://images.unsplash.com/photo-1532601224476-15c79f2f7a51?q=80&w=800&auto=format&fit=crop",
-      excerpt: "The project will construct solar-hybrid mini-grid installations to power households and small businesses in off-grid rural areas.",
-      duration: "5:40 mins"
-    }
-  ];
+export default function FeaturedStories({
+  eyebrow,
+  heading,
+  roleLabel,
+  locationLabel,
+  typeLabel,
+  viewTabs = [],
+  stories = [],
+}: StoriesProps) {
+  const [viewMode, setViewMode] = useState(viewTabs[0]?.tabId ?? 'card');
 
   return (
     <section className="py-24 bg-white">
       <motion.div {...fadeUp(0)} className="container mx-auto px-6">
         <SectionHeader
-          sub="Stories"
-          title="Featured Stories"
+          sub={eyebrow ?? ""}
+          title={heading ?? ""}
           activeTab={viewMode}
           onTabChange={setViewMode}
-          tabs={[
-            { id: 'card', label: 'Card View', icon: LayoutGrid },
-            { id: 'list', label: 'List View', icon: List }
-          ]}
+          tabs={viewTabs.map((tab, idx) => ({
+            id: tab.tabId ?? String(idx),
+            label: tab.label ?? '',
+            icon: VIEW_TAB_ICONS[tab.tabId ?? ''] ?? LayoutGrid
+          }))}
         />
 
         <AnimatePresence mode="wait">
@@ -86,7 +74,7 @@ export default function FeaturedStories() {
                       <img
                         src={story.image}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                        alt={story.title}
+                        alt={story.image_alt_text ?? ""}
                       />
                       {/* Play button – top-right */}
                       <div className={`absolute top-3 right-3 w-8 h-8 rounded-[4px] flex items-center justify-center ${playBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
@@ -97,7 +85,7 @@ export default function FeaturedStories() {
                       {/* Category badge bottom-left */}
                       <div className="absolute bottom-3 left-3">
                         <span className={`backdrop-blur-md text-xs font-bold tracking-wider uppercase px-3 py-0.5 rounded-full font-mono border ${badgeColor}`}>
-                          {i === 0 ? "Case Study" : i === 1 ? "Tech Showcase" : "Milestone Focus"}
+                          {story.badge}
                         </span>
                       </div>
                     </div>
@@ -109,16 +97,16 @@ export default function FeaturedStories() {
                       
                       <div className="space-y-0">
                         <div className="flex justify-between border-t border-gray-100 py-1.5">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">ROLE</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">{roleLabel}</span>
                           <span className="text-xs font-bold font-mono text-[#051F1A]">{story.role}</span>
                         </div>
                         <div className="flex justify-between border-t border-gray-100 py-1.5">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">LOCATION</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">{locationLabel}</span>
                           <span className="text-xs font-bold font-mono text-[#051F1A]">{story.location}</span>
                         </div>
                         <div className="flex justify-between border-t border-gray-100 py-1.5">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">TYPE</span>
-                          <span className={`text-xs font-bold font-mono ${topicColor}`}>{story.type}</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">{typeLabel}</span>
+                          <span className={`text-xs font-bold font-mono ${topicColor}`}>{story.storyType}</span>
                         </div>
                       </div>
                     </div>
@@ -148,7 +136,7 @@ export default function FeaturedStories() {
                   <div key={i} className="group flex flex-col md:flex-row gap-6 bg-white border border-gray-100 p-4 rounded-[8px] shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.025)] hover:border-gray-200 transition-all duration-300 cursor-pointer text-left">
                     {/* Media area */}
                     <div className="w-full md:w-48 aspect-video rounded-[6px] overflow-hidden shrink-0 relative bg-[#051F1A]">
-                      <img src={story.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" alt={story.title} />
+                      <img src={story.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" alt={story.image_alt_text ?? ""} />
                       {/* Play button – top-right */}
                       <div className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-[4px] flex items-center justify-center ${playBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                         <svg width="8" height="8" viewBox="0 0 14 14" fill="none">
@@ -158,7 +146,7 @@ export default function FeaturedStories() {
                       {/* Category badge bottom-left */}
                       <div className="absolute bottom-2.5 left-2.5">
                         <span className={`backdrop-blur-md text-xs font-bold tracking-wider uppercase px-3 py-0.5 rounded-full font-mono border ${badgeColor}`}>
-                          {i === 0 ? "Case Study" : i === 1 ? "Tech Showcase" : "Milestone Focus"}
+                          {story.badge}
                         </span>
                       </div>
                     </div>
@@ -173,16 +161,16 @@ export default function FeaturedStories() {
                       
                       <div className="grid grid-cols-3 gap-4 border-t border-gray-100 pt-3">
                         <div className="flex flex-col text-left">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">ROLE</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">{roleLabel}</span>
                           <span className="text-xs font-bold font-mono text-[#051F1A]">{story.role}</span>
                         </div>
                         <div className="flex flex-col text-left">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">LOCATION</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">{locationLabel}</span>
                           <span className="text-xs font-bold font-mono text-[#051F1A]">{story.location}</span>
                         </div>
                         <div className="flex flex-col text-left">
-                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">TYPE</span>
-                          <span className={`text-xs font-bold font-mono ${topicColor}`}>{story.type}</span>
+                          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider block mb-0.5">{typeLabel}</span>
+                          <span className={`text-xs font-bold font-mono ${topicColor}`}>{story.storyType}</span>
                         </div>
                       </div>
                     </div>
