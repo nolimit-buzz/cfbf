@@ -1,18 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import type { StickyNavSection } from '@/lib/strapi-about-types';
 
-const navItems = [
-  { id: 'mandate',   label: 'Mandate'          },
-  { id: 'market',    label: 'Market Thesis'     },
-  { id: 'framework', label: 'Framework'         },
-  { id: 'partners',  label: 'Partners'          },
-  { id: 'milestones',label: 'Milestones'        },
-  { id: 'audience',  label: 'Who We Serve'      },
-];
+type StickyAboutNavProps = Omit<StickyNavSection, '__component'>;
 
-export default function StickyAboutNav() {
-  const [activeSection, setActiveSection] = useState('mandate');
+export default function StickyAboutNav({ links }: StickyAboutNavProps) {
+  const navItems = React.useMemo(
+    () =>
+      (links ?? [])
+        .filter((link) => link.sectionId)
+        .map((link, index) => ({
+          key: String(link.id ?? index),
+          id: link.sectionId as string,
+          label: link.label,
+        })),
+    [links]
+  );
+
+  const [activeSection, setActiveSection] = useState<string>('');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,7 +37,7 @@ export default function StickyAboutNav() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [navItems]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -49,10 +55,12 @@ export default function StickyAboutNav() {
       <div className="max-w-[1280px] mx-auto px-6 flex items-center justify-start md:justify-center overflow-x-auto gap-6 md:gap-10 scrollbar-none">
         {navItems.map(item => (
           <button
-            key={item.id}
+            key={item.key}
             onClick={() => scrollToSection(item.id)}
             className={`text-[10px] font-bold uppercase tracking-widest transition-all duration-300 pb-1.5 border-b-2 font-mono whitespace-nowrap focus:outline-none ${
-              activeSection === item.id
+              // Before the first scroll event the first link reads as active,
+              // matching the old hardcoded default.
+              (activeSection || navItems[0]?.id) === item.id
                 ? 'text-[#00A788] border-[#00A788]'
                 : 'text-gray-400 border-transparent hover:text-[#051F1A]'
             }`}

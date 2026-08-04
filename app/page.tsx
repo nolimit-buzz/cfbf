@@ -62,7 +62,13 @@ export default function Home() {
   // `cacheComponents` (next.config.ts) requires uncached data to sit inside a
   // Suspense boundary, and getHomeSections() is deliberately uncached.
   return (
-    <Suspense fallback={null}>
+      <Suspense
+          fallback={
+            <div className="bg-[#FAFDFB] text-brand-dark min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
+              Loading about...
+            </div>
+          }
+        >
       <HomeContent />
     </Suspense>
   );

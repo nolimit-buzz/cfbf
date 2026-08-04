@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
-import { projects } from '@/lib/projectsData';
+import { getProjectDetails } from '@/lib/strapi';
 import { newsArticles } from '@/lib/newsData';
 
 export async function GET() {
+  // Projects come from the CMS now, so the handler awaits them; the news half
+  // is still a local module. An unreachable Strapi yields an empty list rather
+  // than a failed response — a partial feed beats a 500 for crawlers.
+  const projects = await getProjectDetails();
+
   const feed = {
-    projects: Object.values(projects).map((p) => ({
-      id: p.id,
+    projects: projects.map((p) => ({
+      id: p.projectId,
       title: p.title,
       location: p.location,
       year: p.year,
