@@ -64,8 +64,8 @@ export default function Home() {
   return (
       <Suspense
           fallback={
-            <div className="bg-[#FAFDFB] text-brand-dark min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
-              Loading about...
+           <div className="bg-brand-dark text-white min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
+          
             </div>
           }
         >

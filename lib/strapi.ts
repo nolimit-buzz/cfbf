@@ -11,6 +11,10 @@ import type {
   ImpactSection,
   ImpactSectionComponent,
 } from "./strapi-impact-types";
+import type {
+  EligibilitySection,
+  EligibilitySectionComponent,
+} from "./strapi-eligibility-types";
 
 export const STRAPI_URL = (
   process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"
@@ -304,6 +308,75 @@ export async function getImpactSections(): Promise<ImpactSection[]> {
 }
 
 /**
+ * Same rule again for the ELIGIBILITY single type. Three components carry
+ * repeatables that themselves hold repeatables, so those need a second level:
+ * - criteria-pillars-section: cards -> listItems and stats
+ * - assessment-steps-section: questions -> options
+ * - assessment-result-section: outcomes and logRows are one level deep
+ */
+function buildEligibilityQuery(): string {
+  const params = new URLSearchParams();
+
+  const oneLevel: EligibilitySectionComponent[] = [
+    "eligibility-page.structured-data-section",
+    "eligibility-page.hero-section",
+    "eligibility-page.timeline-workflow-section",
+    "eligibility-page.next-steps-section",
+    "eligibility-page.final-cta-section",
+    "eligibility-page.assessment-chrome-section",
+    "eligibility-page.assessment-result-section",
+  ];
+
+  for (const component of oneLevel) {
+    params.set(`populate[sections][on][${component}][populate]`, "*");
+  }
+
+  // Criteria pillars: cards -> listItems and stats
+  const criteria =
+    "populate[sections][on][eligibility-page.criteria-pillars-section][populate]";
+  params.set(`${criteria}[cards][populate][listItems][populate]`, "*");
+  params.set(`${criteria}[cards][populate][stats][populate]`, "*");
+
+  // Assessment steps: questions -> options
+  const assessment =
+    "populate[sections][on][eligibility-page.assessment-steps-section][populate]";
+  params.set(`${assessment}[questions][populate][options][populate]`, "*");
+
+  return params.toString();
+}
+
+/** Same contract as fetchHomeSections(), against the ELIGIBILITY singleType. */
+async function fetchEligibilitySections(): Promise<EligibilitySection[]> {
+  const url = `${STRAPI_URL}/api/eligibility?${buildEligibilityQuery()}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error(
+      `GET /api/eligibility failed: ${res.status} ${res.statusText}`
+    );
+  }
+
+  const json = await res.json();
+  const sections = json?.data?.sections;
+
+  return Array.isArray(sections) ? (sections as EligibilitySection[]) : [];
+}
+
+/** Error-handling wrapper — see getHomeSections(). */
+export async function getEligibilitySections(): Promise<EligibilitySection[]> {
+  try {
+    return await fetchEligibilitySections();
+  } catch (error) {
+    if (typeof (error as { digest?: unknown })?.digest === "string") {
+      throw error;
+    }
+    console.error("[strapi] GET /api/eligibility failed:", error);
+    return [];
+  }
+}
+
+/**
  * One case-study record from the `project` collection, looked up by its
  * `projectId` ("01".."06") — the segment in /projects/[id].
  *
@@ -386,7 +459,8 @@ export function findSection<
       | HomeSectionComponent
       | AboutSectionComponent
       | ProjectsSectionComponent
-      | ImpactSectionComponent;
+      | ImpactSectionComponent
+      | EligibilitySectionComponent;
   },
   C extends S["__component"]
 >(sections: S[], component: C): Extract<S, { __component: C }> | undefined {

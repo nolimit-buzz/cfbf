@@ -28,8 +28,8 @@ export default function ImpactPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-[#FAFDFB] text-brand-dark min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
-          Loading impact...
+       <div className="bg-brand-dark text-white min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
+          
         </div>
       }
     >

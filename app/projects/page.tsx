@@ -84,7 +84,7 @@ export default function ProjectsPage() {
     <Suspense
       fallback={
         <div className="bg-[#051F1A] text-white min-h-screen flex items-center justify-center font-mono text-xs uppercase tracking-widest">
-          Loading projects...
+      
         </div>
       }
     >
