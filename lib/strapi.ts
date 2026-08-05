@@ -20,6 +20,11 @@ export const STRAPI_URL = (
   process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"
 ).replace(/\/+$/, "");
 
+export const STRAPI_API_TOKEN = process.env.NEXT_PRIVATE_STRAPI_API_TOKEN;
+const STRAPI_HEADERS = STRAPI_API_TOKEN
+  ? { Authorization: `Bearer ${STRAPI_API_TOKEN}` }
+  : undefined;
+
 /**
  * Strapi v5 does not deep-populate dynamiczones. Each component in the zone has
  * to be named explicitly via `populate[sections][on][<component>]`, and nested
@@ -71,7 +76,7 @@ function buildHomeQuery(): string {
 async function fetchHomeSections(): Promise<HomeSection[]> {
   const url = `${STRAPI_URL}/api/home?${buildHomeQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
   if (!res.ok) {
     throw new Error(`GET /api/home failed: ${res.status} ${res.statusText}`);
@@ -151,7 +156,7 @@ function buildAboutQuery(): string {
 async function fetchAboutSections(): Promise<AboutSection[]> {
   const url = `${STRAPI_URL}/api/about?${buildAboutQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
   if (!res.ok) {
     throw new Error(`GET /api/about failed: ${res.status} ${res.statusText}`);
@@ -224,7 +229,7 @@ function buildProjectsQuery(): string {
 async function fetchProjectsSections(): Promise<ProjectsSection[]> {
   const url = `${STRAPI_URL}/api/projects?${buildProjectsQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
   if (!res.ok) {
     throw new Error(`GET /api/projects failed: ${res.status} ${res.statusText}`);
@@ -282,7 +287,7 @@ function buildImpactQuery(): string {
 async function fetchImpactSections(): Promise<ImpactSection[]> {
   const url = `${STRAPI_URL}/api/impact?${buildImpactQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
   if (!res.ok) {
     throw new Error(`GET /api/impact failed: ${res.status} ${res.statusText}`);
@@ -349,7 +354,7 @@ function buildEligibilityQuery(): string {
 async function fetchEligibilitySections(): Promise<EligibilitySection[]> {
   const url = `${STRAPI_URL}/api/eligibility?${buildEligibilityQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
   if (!res.ok) {
     throw new Error(
@@ -395,7 +400,7 @@ export async function getProjectDetail(
   const url = `${STRAPI_URL}/api/project-records?${params.toString()}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
     if (!res.ok) {
       throw new Error(
@@ -432,7 +437,7 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
   const url = `${STRAPI_URL}/api/project-records?${params.toString()}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
     if (!res.ok) {
       throw new Error(
