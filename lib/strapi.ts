@@ -15,6 +15,15 @@ import type {
   EligibilitySection,
   EligibilitySectionComponent,
 } from "./strapi-eligibility-types";
+import type { NewsSection, NewsSectionComponent } from "./strapi-news-types";
+import type {
+  HowItWorksSection,
+  HowItWorksSectionComponent,
+} from "./strapi-how-it-works-types";
+import type {
+  ContactSection,
+  ContactSectionComponent,
+} from "./strapi-contact-types";
 
 export const STRAPI_URL = (
   process.env.NEXT_PUBLIC_STRAPI_URL ?? process.env.STRAPI_URL ?? "http://localhost:1337"
@@ -106,6 +115,71 @@ export async function getHomeSections(): Promise<HomeSection[]> {
       throw error;
     }
     console.error("[strapi] GET /api/home failed:", error);
+    return [];
+  }
+}
+
+/**
+ * Strapi v5 does not deep-populate dynamiczones. The news page's sections
+ * must be populated explicitly, and nested repeatables (viewTabs, categories,
+ * articles, and articles' themes/paragraphs) require their own populate rules.
+ */
+function buildNewsQuery(): string {
+  const params = new URLSearchParams();
+
+  params.set(
+    "populate[sections][on][news-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.hero-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.listing-section][populate][viewTabs][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.listing-section][populate][categories][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.articles-section][populate][articles][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.article-detail-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][news-page.next-steps-section][populate]",
+    "*"
+  );
+
+  return params.toString();
+}
+
+/** Same contract as fetchHomeSections(), against the NEWS singleType. */
+async function fetchNewsSections(): Promise<NewsSection[]> {
+  const url = `${STRAPI_URL}/api/news?${buildNewsQuery()}`;
+
+  const res = await fetchStrapi(url, { cache: "no-store" });
+
+  const json = await res.json();
+  const sections = json?.data?.sections;
+
+  return Array.isArray(sections) ? (sections as NewsSection[]) : [];
+}
+
+/** Error-handling wrapper — see getHomeSections(). */
+export async function getNewsSections(): Promise<NewsSection[]> {
+  try {
+    return await fetchNewsSections();
+  } catch (error) {
+    if (typeof (error as { digest?: unknown })?.digest === "string") {
+      throw error;
+    }
+    console.error("[strapi] GET /api/news failed:", error);
     return [];
   }
 }
@@ -286,13 +360,57 @@ export async function getProjectsSections(): Promise<ProjectsSection[]> {
 }
 
 /**
- * Same rule again for the IMPACT single type, but simpler: every one of its ten
- * components holds at most one level of repeatables (stats, pillars, tabs,
- * stories, metrics, timeline points, SDG cards, columns, assets, links), so a
- * single `[populate]=*` per component covers the whole zone.
+ * Same rule again for the IMPACT single type. Every one of its ten components
+ * holds at most one level of repeatables (stats, pillars, tabs, stories,
+ * metrics, timeline points, SDG cards, columns, assets, links), but Strapi v5
+ * still won't deep-populate a dynamiczone from a bare `populate=*` — each
+ * component needs its own `[populate]=*`, same as about/projects.
  */
 function buildImpactQuery(): string {
-  return "populate=*";
+  const params = new URLSearchParams();
+
+  params.set(
+    "populate[sections][on][impact-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.hero-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.philosophy-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.impact-console-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.stories-tab-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.numbers-tab-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.investments-tab-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.assets-tab-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.next-steps-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][impact-page.video-modal-section][populate]",
+    "*"
+  );
+
+  return params.toString();
 }
 
 /** Same contract as fetchHomeSections(), against the IMPACT singleType. */
@@ -328,7 +446,58 @@ export async function getImpactSections(): Promise<ImpactSection[]> {
  * - assessment-result-section: outcomes and logRows are one level deep
  */
 function buildEligibilityQuery(): string {
-  return "populate=*";
+  const params = new URLSearchParams();
+
+  params.set(
+    "populate[sections][on][eligibility-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.hero-section][populate][sectors][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.criteria-pillars-section][populate][cards][populate][listItems][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.criteria-pillars-section][populate][cards][populate][stats][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.timeline-workflow-section][populate][steps][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.next-steps-section][populate][links][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.final-cta-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.assessment-chrome-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.assessment-steps-section][populate][steps][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.assessment-steps-section][populate][questions][populate][options][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.assessment-result-section][populate][outcomes][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][eligibility-page.assessment-result-section][populate][logRows][populate]",
+    "*"
+  );
+
+  return params.toString();
 }
 
 /** Same contract as fetchHomeSections(), against the ELIGIBILITY singleType. */
@@ -358,6 +527,81 @@ export async function getEligibilitySections(): Promise<EligibilitySection[]> {
       throw error;
     }
     console.error("[strapi] GET /api/eligibility failed:", error);
+    return [];
+  }
+}
+
+/**
+ * Same rule again for the HOW-IT-WORKS single type. Two components carry
+ * repeatables: the hero's 4 condensed phase cards, and the process section's
+ * 9 timeline steps. The financing-structure section carries a mix of simple
+ * repeatables (bullets, anchorFunders, taProviders) and a single non-repeatable
+ * component (coFinancingPartner).
+ */
+function buildHowItWorksQuery(): string {
+  const params = new URLSearchParams();
+
+  params.set(
+    "populate[sections][on][how-it-works-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.hero-section][populate][steps][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.financing-structure-section][populate][bullets][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.financing-structure-section][populate][anchorFunders][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.financing-structure-section][populate][coFinancingPartner][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.financing-structure-section][populate][taProviders][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.facility-structure-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.process-section][populate][steps][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][how-it-works-page.next-steps-section][populate][links][populate]",
+    "*"
+  );
+
+  return params.toString();
+}
+
+/** Same contract as fetchHomeSections(), against the HOW-IT-WORKS singleType. */
+async function fetchHowItWorksSections(): Promise<HowItWorksSection[]> {
+  const url = `${STRAPI_URL}/api/how-it-works?${buildHowItWorksQuery()}`;
+
+  const res = await fetchStrapi(url, { cache: "no-store" });
+
+  const json = await res.json();
+  const sections = json?.data?.sections;
+
+  return Array.isArray(sections) ? (sections as HowItWorksSection[]) : [];
+}
+
+/** Error-handling wrapper — see getHomeSections(). */
+export async function getHowItWorksSections(): Promise<HowItWorksSection[]> {
+  try {
+    return await fetchHowItWorksSections();
+  } catch (error) {
+    if (typeof (error as { digest?: unknown })?.digest === "string") {
+      throw error;
+    }
+    console.error("[strapi] GET /api/how-it-works failed:", error);
     return [];
   }
 }
@@ -438,6 +682,75 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
   }
 }
 
+/**
+ * Same rule again for the CONTACT single type. None of its 9 components carry
+ * repeatable sub-fields, so a flat `[populate]=*` per component is enough.
+ */
+function buildContactQuery(): string {
+  const params = new URLSearchParams();
+
+  params.set(
+    "populate[sections][on][contact-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set("populate[sections][on][contact-page.hero-section][populate]", "*");
+  params.set(
+    "populate[sections][on][contact-page.facility-contacts-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.eligibility-reminder-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.fun-stats-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.enquiry-form-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.submission-success-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.next-steps-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][contact-page.download-cta-section][populate]",
+    "*"
+  );
+
+  return params.toString();
+}
+
+/** Same contract as fetchHomeSections(), against the CONTACT singleType. */
+async function fetchContactSections(): Promise<ContactSection[]> {
+  const url = `${STRAPI_URL}/api/contact?${buildContactQuery()}`;
+
+  const res = await fetchStrapi(url, { cache: "no-store" });
+
+  const json = await res.json();
+  const sections = json?.data?.sections;
+
+  return Array.isArray(sections) ? (sections as ContactSection[]) : [];
+}
+
+/** Error-handling wrapper — see getHomeSections(). */
+export async function getContactSections(): Promise<ContactSection[]> {
+  try {
+    return await fetchContactSections();
+  } catch (error) {
+    if (typeof (error as { digest?: unknown })?.digest === "string") {
+      throw error;
+    }
+    console.error("[strapi] GET /api/contact failed:", error);
+    return [];
+  }
+}
+
 /** Returns the first section matching `component`, narrowed to its type. */
 export function findSection<
   S extends {
@@ -446,7 +759,10 @@ export function findSection<
       | AboutSectionComponent
       | ProjectsSectionComponent
       | ImpactSectionComponent
-      | EligibilitySectionComponent;
+      | EligibilitySectionComponent
+      | NewsSectionComponent
+      | HowItWorksSectionComponent
+      | ContactSectionComponent;
   },
   C extends S["__component"]
 >(sections: S[], component: C): Extract<S, { __component: C }> | undefined {
