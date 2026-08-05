@@ -24,6 +24,8 @@ import type {
   ContactSection,
   ContactSectionComponent,
 } from "./strapi-contact-types";
+import { projects as legacyProjects } from "./projectsData";
+import { newsArticles } from "./newsData";
 
 export const STRAPI_URL = (
   process.env.NEXT_PUBLIC_STRAPI_URL ?? process.env.STRAPI_URL ?? "http://localhost:1337"
@@ -159,6 +161,52 @@ function buildNewsQuery(): string {
   return params.toString();
 }
 
+/**
+ * Hardcoded stand-in for the NEWS singleType, used when Strapi is unreachable
+ * or returns a permission error. Sourced from the pre-CMS newsArticles seed
+ * so /news/[id] still builds and renders while the CMS side gets sorted out.
+ */
+const FALLBACK_NEWS_SECTIONS: NewsSection[] = [
+  {
+    __component: "news-page.articles-section",
+    articles: newsArticles.map((article) => ({
+      articleId: article.id,
+      tag: article.tag,
+      date: article.date,
+      readTime: article.readTime,
+      title: article.title,
+      excerpt: article.excerpt,
+      author: article.author,
+      authorAvatar: article.authorAvatar,
+      image: article.image,
+      keyContext: article.keyContext,
+      themes: article.themes.map((label) => ({ label })),
+      paragraphs: article.paragraphs.map((paragraph) => ({
+        blockType: paragraph.type,
+        text: paragraph.text,
+        caption: paragraph.caption,
+        url: paragraph.url,
+      })),
+    })),
+  },
+  {
+    __component: "news-page.article-detail-section",
+    notFoundTitle: "Article not found",
+    notFoundBody: "This article may have been moved or unpublished.",
+    notFoundCtaLabel: "Back to news",
+    backLabel: "Back to news",
+    postedByLabel: "Posted by",
+    themesLabel: "Themes",
+    contextLabel: "Key context",
+    shareLabel: "Share",
+    previousArticleLabel: "Previous",
+    nextArticleLabel: "Next",
+    relatedHeadingPartOne: "Related",
+    relatedHeadingHighlight: "articles",
+    relatedCtaLabel: "Read more",
+  },
+];
+
 /** Same contract as fetchHomeSections(), against the NEWS singleType. */
 async function fetchNewsSections(): Promise<NewsSection[]> {
   const url = `${STRAPI_URL}/api/news?${buildNewsQuery()}`;
@@ -180,7 +228,7 @@ export async function getNewsSections(): Promise<NewsSection[]> {
       throw error;
     }
     console.error("[strapi] GET /api/news failed:", error);
-    return [];
+    return FALLBACK_NEWS_SECTIONS;
   }
 }
 
@@ -607,6 +655,47 @@ export async function getHowItWorksSections(): Promise<HowItWorksSection[]> {
 }
 
 /**
+ * Hardcoded stand-in for the `project` collection, used when Strapi is
+ * unreachable or returns a permission error. Sourced from the pre-CMS
+ * projectsData seed so /projects/[id] still builds and renders while the CMS
+ * side gets sorted out.
+ */
+const FALLBACK_PROJECT_DETAILS: ProjectDetail[] = Object.values(legacyProjects)
+  .sort((a, b) => a.id.localeCompare(b.id))
+  .map((project) => ({
+    documentId: project.id,
+    projectId: project.id,
+    slug: project.id,
+    title: project.title,
+    location: project.location,
+    year: project.year,
+    capital: project.capital,
+    capacity: project.capacity,
+    category: project.category,
+    connections: project.connections,
+    jobs: project.jobs,
+    ghg: project.ghg,
+    status: project.status,
+    image: project.image,
+    desc: project.desc,
+    problem: project.problem,
+    solution: project.solution,
+    impact: project.impact,
+    financing: project.financing,
+    impact_desc: project.impact_desc,
+    gallery: project.gallery.map((item) => ({
+      image: item.image,
+      caption: item.caption,
+    })),
+    videos: project.videos?.map((video) => ({
+      videoId: video.id,
+      title: video.title,
+      category: video.category,
+      youtubeId: video.youtubeId,
+    })),
+  }));
+
+/**
  * One case-study record from the `project` collection, looked up by its
  * `projectId` ("01".."06") — the segment in /projects/[id].
  *
@@ -642,7 +731,7 @@ export async function getProjectDetail(
       throw error;
     }
     console.error("[strapi] GET /api/projects failed:", error);
-    return null;
+    return FALLBACK_PROJECT_DETAILS.find((p) => p.projectId === projectId) ?? null;
   }
 }
 
@@ -678,7 +767,7 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
       throw error;
     }
     console.error("[strapi] GET /api/projects failed:", error);
-    return [];
+    return FALLBACK_PROJECT_DETAILS;
   }
 }
 

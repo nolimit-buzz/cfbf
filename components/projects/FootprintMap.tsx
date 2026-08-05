@@ -186,11 +186,11 @@ export default function FootprintMap({
     if (hasProjects && stateInfo?.projectType) {
       return {
         fill: colorByProjectType.get(stateInfo.projectType) ?? defaultTypeColor,
-        stroke: 'rgba(255,255,255,0.18)',
-        strokeWidth: 0.8,
+        stroke: 'rgba(255,255,255,0.55)',
+        strokeWidth: 1.2,
       };
     }
-    return { fill: 'rgba(255,255,255,0.03)', stroke: 'rgba(255,255,255,0.10)', strokeWidth: 0.7 };
+    return { fill: 'rgba(255,255,255,0.03)', stroke: 'rgba(255,255,255,0.4)', strokeWidth: 1 };
   };
 
   // FCT is a territory, not a state, so it is excluded from the states count.
@@ -312,10 +312,10 @@ export default function FootprintMap({
           )}
 
           <div className="flex-1 flex items-center justify-center p-6 pt-10 relative">
-            <div className="relative w-full">
+            <div className="relative w-full aspect-[744/600] max-h-[420px]">
               <svg
                 viewBox={nigeriaMapData.viewBox}
-                className="w-full max-h-[420px] select-none"
+                className="w-full h-full select-none"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 {(nigeriaMapData.locations as NigeriaStateLocation[]).map(loc => {
