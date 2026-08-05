@@ -305,10 +305,10 @@ export const LGA_PROJECTS: Record<string, LGAProjectEntry[]> = {
 // ─── Project Type Legend ──────────────────────────────────────────────────────
 
 export const PROJECT_TYPE_LEGEND = [
-  { label: 'Rural Electrification',               color: '#c8e6c9', type: 'rural-electrification' },
-  { label: 'Rural Telephony',                      color: '#b3c5e8', type: 'rural-telephony' },
-  { label: 'Rural Electrification & Telephony',    color: '#fff9c4', type: 'both' },
-  { label: 'Mini Grids – Markets',                 color: '#c8b9a4', type: 'mini-grids' },
+  { label: 'Rural Electrification',               color: '#48C0A3', type: 'rural-electrification' },
+  { label: 'Rural Telephony',                      color: '#648CDC', type: 'rural-telephony' },
+  { label: 'Rural Electrification & Telephony',    color: '#FDB713', type: 'both' },
+  { label: 'Mini Grids – Markets',                 color: '#B4A082', type: 'mini-grids' },
   { label: 'Default',                              color: '#2d6a4f', type: 'default' },
   { label: 'PUE',                                  color: '#69b44b', type: 'pue' },
   { label: 'Rural Electrification & PUE',          color: '#f4845f', type: 'rural-elec-pue' },
@@ -341,12 +341,6 @@ export function getLGAsForState(mapId: string): string[] {
 }
 
 export function getProjectTypeColor(type: StateInfo['projectType']): string {
-  switch (type) {
-    case 'rural-electrification': return 'rgba(72, 192, 163, 0.75)';
-    case 'rural-telephony':       return 'rgba(100, 140, 220, 0.75)';
-    case 'both':                  return 'rgba(253, 183, 19, 0.75)';
-    case 'mini-grids':            return 'rgba(180, 160, 130, 0.75)';
-    case 'pue':                   return 'rgba(105, 180, 75, 0.85)';
-    default:                      return 'rgba(45, 106, 79, 0.75)';
-  }
+  const entry = PROJECT_TYPE_LEGEND.find(item => item.type === (type ?? 'default'));
+  return entry?.color ?? PROJECT_TYPE_LEGEND.find(item => item.type === 'default')!.color;
 }
