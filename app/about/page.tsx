@@ -16,6 +16,7 @@ function buildJsonLd(data: AboutStructuredDataSection) {
 async function AboutContent() {
   const sections = await getAboutSections();
   const structuredData = findSection(sections, 'about-page.structured-data-section');
+  console.log('Structured data for About page:', structuredData);
 
   return (
     <div className="bg-[#FAFDFB] text-brand-dark min-h-screen relative font-sans antialiased text-left selection:bg-brand-accent selection:text-brand-dark">

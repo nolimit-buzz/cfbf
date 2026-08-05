@@ -5,6 +5,7 @@ import type { StructuredDataSection } from "@/lib/strapi-types";
 
 function buildJsonLd(data: StructuredDataSection) {
   const orgId = `${data.url ?? ""}/#organization`;
+  console.log("Building JSON-LD for home page", { orgId, data });
 
   return {
     "@context": "https://schema.org",
