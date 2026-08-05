@@ -17,13 +17,49 @@ import type {
 } from "./strapi-eligibility-types";
 
 export const STRAPI_URL = (
-  process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:1337"
+  process.env.NEXT_PUBLIC_STRAPI_URL ?? process.env.STRAPI_URL ?? "http://localhost:1337"
 ).replace(/\/+$/, "");
 
-export const STRAPI_API_TOKEN = process.env.NEXT_PRIVATE_STRAPI_API_TOKEN;
+export const STRAPI_API_TOKEN =
+  process.env.NEXT_PRIVATE_STRAPI_API_TOKEN?.trim() ?? process.env.STRAPI_API_TOKEN?.trim();
 const STRAPI_HEADERS = STRAPI_API_TOKEN
   ? { Authorization: `Bearer ${STRAPI_API_TOKEN}` }
   : undefined;
+
+async function fetchStrapi(url: string, init?: RequestInit): Promise<Response> {
+  const headers = init?.headers
+    ? { ...(init.headers as HeadersInit), ...STRAPI_HEADERS }
+    : STRAPI_HEADERS;
+
+  const res = await fetch(url, {
+    cache: "no-store",
+    ...init,
+    headers,
+  });
+
+  if (res.ok) {
+    return res;
+  }
+
+  if (res.status === 401 && STRAPI_HEADERS) {
+    console.warn(
+      `[strapi] Authorization failed with API token, retrying unauthenticated request: ${url}`
+    );
+
+    const retry = await fetch(url, {
+      cache: "no-store",
+      ...init,
+    });
+
+    if (retry.ok) {
+      return retry;
+    }
+
+    throw new Error(`GET ${new URL(url).pathname} failed: ${retry.status} ${retry.statusText}`);
+  }
+
+  throw new Error(`GET ${new URL(url).pathname} failed: ${res.status} ${res.statusText}`);
+}
 
 /**
  * Strapi v5 does not deep-populate dynamiczones. Each component in the zone has
@@ -31,35 +67,7 @@ const STRAPI_HEADERS = STRAPI_API_TOKEN
  * repeatable components need their own populate level below that.
  */
 function buildHomeQuery(): string {
-  const params = new URLSearchParams();
-
-  const oneLevel: HomeSectionComponent[] = [
-    "home-page.hero-section",
-    "home-page.about-section",
-    "home-page.impact-section",
-    "home-page.projects-section",
-    "home-page.map-section",
-    "home-page.stories-section",
-    "home-page.net-zero-section",
-    "home-page.structured-data-section",
-  ];
-
-  for (const component of oneLevel) {
-    params.set(`populate[sections][on][${component}][populate]`, "*");
-  }
-
-  // News articles carry their own repeatable children (themes, paragraphs),
-  // so this branch needs two levels of populate.
-  params.set(
-    "populate[sections][on][home-page.news-section][populate][viewTabs][populate]",
-    "*"
-  );
-  params.set(
-    "populate[sections][on][home-page.news-section][populate][articles][populate]",
-    "*"
-  );
-
-  return params.toString();
+  return "populate=*";
 }
 
 /**
@@ -76,11 +84,7 @@ function buildHomeQuery(): string {
 async function fetchHomeSections(): Promise<HomeSection[]> {
   const url = `${STRAPI_URL}/api/home?${buildHomeQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
-
-  if (!res.ok) {
-    throw new Error(`GET /api/home failed: ${res.status} ${res.statusText}`);
-  }
+  const res = await fetchStrapi(url, { cache: "no-store" });
 
   const json = await res.json();
   const sections = json?.data?.sections;
@@ -107,45 +111,65 @@ export async function getHomeSections(): Promise<HomeSection[]> {
 }
 
 /**
- * Strapi v5 does not deep-populate dynamiczones. Same rule as the home query:
- * every component in the zone is named explicitly. Three about components carry
- * repeatables that themselves hold repeatables (partner groups -> partners,
- * milestones -> events, personas -> questions), so those need a second level.
+ * Strapi v5 does not deep-populate dynamiczones. The about page's sections
+ * must be populated explicitly, and nested repeatables require their own
+ * populate rules.
  */
 function buildAboutQuery(): string {
   const params = new URLSearchParams();
 
-  const oneLevel: AboutSectionComponent[] = [
-    "about-page.structured-data-section",
-    "about-page.hero-section",
-    "about-page.sticky-nav-section",
-    "about-page.mandate-section",
-    "about-page.market-section",
-    "about-page.energy-map-section",
-    "about-page.framework-section",
-    "about-page.capital-stack-section",
-    "about-page.next-steps-section",
-    "about-page.download-cta-section",
-  ];
-
-  for (const component of oneLevel) {
-    params.set(`populate[sections][on][${component}][populate]`, "*");
-  }
-
+  // Strapi rejects the top-level dynamiczone wildcard here; every component
+  // must be populated explicitly with `populate[sections][on][<component>]`.
   params.set(
-    "populate[sections][on][about-page.partners-section][populate][groups][populate][partners][populate]",
+    "populate[sections][on][about-page.structured-data-section][populate]",
     "*"
   );
   params.set(
-    "populate[sections][on][about-page.milestones-section][populate][milestones][populate][events][populate]",
+    "populate[sections][on][about-page.hero-section][populate]",
     "*"
   );
   params.set(
-    "populate[sections][on][about-page.milestones-section][populate][railYears][populate]",
+    "populate[sections][on][about-page.sticky-nav-section][populate]",
     "*"
   );
   params.set(
-    "populate[sections][on][about-page.audience-section][populate][personas][populate][questions][populate]",
+    "populate[sections][on][about-page.mandate-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.market-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.energy-map-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.framework-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.capital-stack-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.partners-section][populate][groups][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.milestones-section][populate][milestones][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.audience-section][populate][personas][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.next-steps-section][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][about-page.download-cta-section][populate]",
     "*"
   );
 
@@ -156,11 +180,7 @@ function buildAboutQuery(): string {
 async function fetchAboutSections(): Promise<AboutSection[]> {
   const url = `${STRAPI_URL}/api/about?${buildAboutQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
-
-  if (!res.ok) {
-    throw new Error(`GET /api/about failed: ${res.status} ${res.statusText}`);
-  }
+  const res = await fetchStrapi(url, { cache: "no-store" });
 
   const json = await res.json();
   const sections = json?.data?.sections;
@@ -193,34 +213,49 @@ export async function getAboutSections(): Promise<AboutSection[]> {
 function buildProjectsQuery(): string {
   const params = new URLSearchParams();
 
-  const oneLevel: ProjectsSectionComponent[] = [
-    "projects-page.structured-data-section",
-    "projects-page.hero-section",
-    "projects-page.portfolio-tabs-section",
-    "projects-page.analysis-tab-section",
-    "projects-page.pipeline-tab-section",
-    "projects-page.eligibility-cta-section",
-    "projects-page.lga-modal-section",
-    "projects-page.next-steps-section",
-  ];
-
-  for (const component of oneLevel) {
-    params.set(`populate[sections][on][${component}][populate]`, "*");
-  }
-
-  const console_ =
-    "populate[sections][on][projects-page.pipeline-console-section][populate]";
-  params.set(`${console_}[stages][populate][metrics][populate]`, "*");
-  params.set(`${console_}[metricLabels][populate]`, "*");
-  params.set(`${console_}[sdgFrameworks][populate]`, "*");
-  params.set(`${console_}[totalPipelineRows][populate]`, "*");
-  params.set(`${console_}[mandatedDealRows][populate]`, "*");
-
-  const map =
-    "populate[sections][on][projects-page.footprint-map-section][populate]";
-  params.set(`${map}[states][populate][lgas][populate]`, "*");
-  params.set(`${map}[legend][populate]`, "*");
-  params.set(`${map}[lgaProjects][populate]`, "*");
+  params.set(
+    "populate[sections][on][projects-page.structured-data-section][populate]",
+    "*"
+  );
+  params.set("populate[sections][on][projects-page.hero-section][populate]", "*");
+  params.set("populate[sections][on][projects-page.portfolio-tabs-section][populate]", "*");
+  params.set("populate[sections][on][projects-page.analysis-tab-section][populate]", "*");
+  params.set("populate[sections][on][projects-page.pipeline-tab-section][populate]", "*");
+  params.set(
+    "populate[sections][on][projects-page.pipeline-console-section][populate][metricLabels][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.pipeline-console-section][populate][stages][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.pipeline-console-section][populate][sdgFrameworks][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.pipeline-console-section][populate][totalPipelineRows][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.pipeline-console-section][populate][mandatedDealRows][populate]",
+    "*"
+  );
+  params.set("populate[sections][on][projects-page.eligibility-cta-section][populate]", "*");
+  params.set(
+    "populate[sections][on][projects-page.footprint-map-section][populate][legend][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.footprint-map-section][populate][states][populate]",
+    "*"
+  );
+  params.set(
+    "populate[sections][on][projects-page.footprint-map-section][populate][lgaProjects][populate]",
+    "*"
+  );
+  params.set("populate[sections][on][projects-page.lga-modal-section][populate]", "*");
+  params.set("populate[sections][on][projects-page.next-steps-section][populate]", "*");
 
   return params.toString();
 }
@@ -229,11 +264,7 @@ function buildProjectsQuery(): string {
 async function fetchProjectsSections(): Promise<ProjectsSection[]> {
   const url = `${STRAPI_URL}/api/projects?${buildProjectsQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
-
-  if (!res.ok) {
-    throw new Error(`GET /api/projects failed: ${res.status} ${res.statusText}`);
-  }
+  const res = await fetchStrapi(url, { cache: "no-store" });
 
   const json = await res.json();
   const sections = json?.data?.sections;
@@ -261,37 +292,14 @@ export async function getProjectsSections(): Promise<ProjectsSection[]> {
  * single `[populate]=*` per component covers the whole zone.
  */
 function buildImpactQuery(): string {
-  const params = new URLSearchParams();
-
-  const oneLevel: ImpactSectionComponent[] = [
-    "impact-page.structured-data-section",
-    "impact-page.hero-section",
-    "impact-page.philosophy-section",
-    "impact-page.impact-console-section",
-    "impact-page.stories-tab-section",
-    "impact-page.numbers-tab-section",
-    "impact-page.investments-tab-section",
-    "impact-page.assets-tab-section",
-    "impact-page.next-steps-section",
-    "impact-page.video-modal-section",
-  ];
-
-  for (const component of oneLevel) {
-    params.set(`populate[sections][on][${component}][populate]`, "*");
-  }
-
-  return params.toString();
+  return "populate=*";
 }
 
 /** Same contract as fetchHomeSections(), against the IMPACT singleType. */
 async function fetchImpactSections(): Promise<ImpactSection[]> {
   const url = `${STRAPI_URL}/api/impact?${buildImpactQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
-
-  if (!res.ok) {
-    throw new Error(`GET /api/impact failed: ${res.status} ${res.statusText}`);
-  }
+  const res = await fetchStrapi(url, { cache: "no-store" });
 
   const json = await res.json();
   const sections = json?.data?.sections;
@@ -320,41 +328,14 @@ export async function getImpactSections(): Promise<ImpactSection[]> {
  * - assessment-result-section: outcomes and logRows are one level deep
  */
 function buildEligibilityQuery(): string {
-  const params = new URLSearchParams();
-
-  const oneLevel: EligibilitySectionComponent[] = [
-    "eligibility-page.structured-data-section",
-    "eligibility-page.hero-section",
-    "eligibility-page.timeline-workflow-section",
-    "eligibility-page.next-steps-section",
-    "eligibility-page.final-cta-section",
-    "eligibility-page.assessment-chrome-section",
-    "eligibility-page.assessment-result-section",
-  ];
-
-  for (const component of oneLevel) {
-    params.set(`populate[sections][on][${component}][populate]`, "*");
-  }
-
-  // Criteria pillars: cards -> listItems and stats
-  const criteria =
-    "populate[sections][on][eligibility-page.criteria-pillars-section][populate]";
-  params.set(`${criteria}[cards][populate][listItems][populate]`, "*");
-  params.set(`${criteria}[cards][populate][stats][populate]`, "*");
-
-  // Assessment steps: questions -> options
-  const assessment =
-    "populate[sections][on][eligibility-page.assessment-steps-section][populate]";
-  params.set(`${assessment}[questions][populate][options][populate]`, "*");
-
-  return params.toString();
+  return "populate=*";
 }
 
 /** Same contract as fetchHomeSections(), against the ELIGIBILITY singleType. */
 async function fetchEligibilitySections(): Promise<EligibilitySection[]> {
   const url = `${STRAPI_URL}/api/eligibility?${buildEligibilityQuery()}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
+  const res = await fetchStrapi(url, { cache: "no-store" });
 
   if (!res.ok) {
     throw new Error(
@@ -400,7 +381,7 @@ export async function getProjectDetail(
   const url = `${STRAPI_URL}/api/projects?${params.toString()}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
+    const res = await fetchStrapi(url, { cache: "no-store" });
 
     if (!res.ok) {
       throw new Error(
@@ -437,7 +418,7 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
   const url = `${STRAPI_URL}/api/projects?${params.toString()}`;
 
   try {
-    const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
+    const res = await fetchStrapi(url, { cache: "no-store" });
 
     if (!res.ok) {
       throw new Error(
