@@ -397,14 +397,14 @@ export async function getProjectDetail(
   params.set("populate[gallery][populate]", "*");
   params.set("populate[videos][populate]", "*");
 
-  const url = `${STRAPI_URL}/api/project-records?${params.toString()}`;
+  const url = `${STRAPI_URL}/api/projects?${params.toString()}`;
 
   try {
     const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
     if (!res.ok) {
       throw new Error(
-        `GET /api/project-records failed: ${res.status} ${res.statusText}`
+        `GET /api/projects failed: ${res.status} ${res.statusText}`
       );
     }
 
@@ -416,7 +416,7 @@ export async function getProjectDetail(
     if (typeof (error as { digest?: unknown })?.digest === "string") {
       throw error;
     }
-    console.error("[strapi] GET /api/project-records failed:", error);
+    console.error("[strapi] GET /api/projects failed:", error);
     return null;
   }
 }
@@ -434,14 +434,14 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
   params.set("populate[gallery][populate]", "*");
   params.set("populate[videos][populate]", "*");
 
-  const url = `${STRAPI_URL}/api/project-records?${params.toString()}`;
+  const url = `${STRAPI_URL}/api/projects?${params.toString()}`;
 
   try {
     const res = await fetch(url, { cache: "no-store", headers: STRAPI_HEADERS });
 
     if (!res.ok) {
       throw new Error(
-        `GET /api/project-records failed: ${res.status} ${res.statusText}`
+        `GET /api/projects failed: ${res.status} ${res.statusText}`
       );
     }
 
@@ -452,7 +452,7 @@ export async function getProjectDetails(): Promise<ProjectDetail[]> {
     if (typeof (error as { digest?: unknown })?.digest === "string") {
       throw error;
     }
-    console.error("[strapi] GET /api/project-records failed:", error);
+    console.error("[strapi] GET /api/projects failed:", error);
     return [];
   }
 }
