@@ -6,3 +6,4 @@
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_STRAPI_URL"
   # Public CMS base URL; set here so deploy previews and branch deploys get it too.
   NEXT_PUBLIC_STRAPI_URL = "https://climatefacilitycms.infracredit.ng"
+  NEXT_PRIVATE_STRAPI_API_TOKEN="afe47796842cb9fe9421e47ba389e102ac057533468206bc2697e82b154ea889b277ca21ece7eb8f3d723e71887e71f76fbbc0cd3a5682ef5e881314198cf7daa27b65edc364ca6463a9e8d495bc7721522aa1be8de3e0fce8e460f200b7b18d07a47a60f95b4067bd9d37bf2cbe9b5c384e3d4cd8d6a4a35734d1136594d615"
